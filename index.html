@@ -1,679 +1,556 @@
-<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>Homework Assistant</title><script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script><style>  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');  :root {    --bg:#f5f2eb;--surface:#faf8f3;--surface2:#edeae0;--border:#d8d3c5;    --text:#1a1714;--text-muted:#7a7568;--text-dim:#b0aa9e;--ink:#1a1714;    --accent:#e8562a;--accent2:#2a6ee8;--green:#2a8a4a;--yellow:#e8a82a;  }  *{box-sizing:border-box;margin:0;padding:0;}  body{background:var(--bg);color:var(--text);font-family:'Space Grotesk',sans-serif;min-height:100vh;}  .app{max-width:860px;margin:0 auto;padding:32px 24px;}  .header{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:36px;padding-bottom:20px;border-bottom:2px solid var(--ink);}  .logo{display:flex;align-items:center;gap:14px;}  .logo-mark{width:48px;height:48px;background:var(--ink);border-radius:4px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}  .logo-mark svg{width:28px;height:28px;}  .logo-text h1{font-size:22px;font-weight:700;letter-spacing:-0.03em;line-height:1;}  .logo-text p{font-size:12px;color:var(--text-muted);margin-top:3px;font-family:'Space Mono',monospace;}  .header-right{display:flex;align-items:center;gap:20px;}  .stat-pill{background:var(--ink);color:var(--bg);font-family:'Space Mono',monospace;font-size:12px;padding:6px 14px;border-radius:100px;display:flex;align-items:center;gap:8px;}  .stat-pill .num{font-size:18px;font-weight:700;}
-  .watch-panel{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:18px 20px;margin-bottom:20px;}  .watch-top{display:flex;align-items:center;justify-content:space-between;gap:16px;}  .watch-info{}  .watch-title{font-size:14px;font-weight:700;letter-spacing:-0.01em;margin-bottom:3px;}  .watch-desc{font-size:12px;color:var(--text-muted);}  .watch-controls{display:flex;align-items:center;gap:10px;flex-shrink:0;}  .btn-watch{display:inline-flex;align-items:center;gap:8px;background:var(--accent2);color:#fff;border:none;padding:10px 20px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.15s;white-space:nowrap;}  .btn-watch:hover{background:#1a5bc4;}  .btn-watch.active{background:var(--accent);}  .btn-watch.active:hover{background:#c94420;}  .btn-watch:disabled{opacity:0.4;cursor:not-allowed;}  .watch-status{display:flex;align-items:center;gap:8px;margin-top:14px;display:none;}  .watch-status.visible{display:flex;}  .pulse{width:8px;height:8px;background:var(--accent);border-radius:50%;animation:pulse 1.2s ease-in-out infinite;}  @keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:0.4;transform:scale(0.7);}}  .watch-status-text{font-size:12px;color:var(--text-muted);font-family:'Space Mono',monospace;}  .countdown{font-family:'Space Mono',monospace;font-size:11px;color:var(--text-dim);}
-  .model-bar{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:none;}  .model-bar.visible{display:block;}  .model-bar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}  .model-label{font-size:13px;font-weight:600;display:flex;align-items:center;gap:8px;}  .spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent2);border-radius:50%;animation:spin 0.7s linear infinite;}  @keyframes spin{to{transform:rotate(360deg);}}  .model-pct{font-family:'Space Mono',monospace;font-size:12px;color:var(--text-muted);}  .progress-track{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden;}  .progress-fill{height:100%;background:var(--accent2);border-radius:2px;transition:width 0.3s ease;width:0%;}
-  .upload-zone{border:2px dashed var(--border);border-radius:8px;padding:40px 32px;text-align:center;cursor:pointer;transition:all 0.2s;background:var(--surface);position:relative;margin-bottom:20px;}  .upload-zone:hover,.upload-zone.drag-over{border-color:var(--accent);background:#fff9f7;}  .upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}  .upload-icon{width:52px;height:52px;border:2px solid var(--border);border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;background:var(--surface2);transition:all 0.2s;}  .upload-zone:hover .upload-icon{border-color:var(--accent);background:#fde8e1;}  .upload-icon svg{width:24px;height:24px;stroke:var(--text-muted);fill:none;stroke-width:1.5;transition:stroke 0.2s;}  .upload-zone:hover .upload-icon svg{stroke:var(--accent);}  .upload-title{font-size:16px;font-weight:600;margin-bottom:6px;letter-spacing:-0.02em;}  .upload-desc{font-size:12px;color:var(--text-muted);line-height:1.6;max-width:360px;margin:0 auto 18px;}  .btn-upload{display:inline-flex;align-items:center;gap:8px;background:var(--ink);color:var(--bg);border:none;padding:10px 20px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.15s;pointer-events:none;}  .upload-zone:hover .btn-upload{background:var(--accent);}  .divider{display:flex;align-items:center;gap:16px;margin:20px 0;}  .divider-line{flex:1;height:1px;background:var(--border);}  .divider span{font-size:12px;color:var(--text-dim);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:0.08em;}  .paste-area{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:16px;display:flex;gap:12px;align-items:flex-start;margin-bottom:20px;transition:border-color 0.2s;}  .paste-area:focus-within{border-color:var(--accent2);}  .paste-area textarea{flex:1;background:transparent;border:none;outline:none;font-family:'Space Grotesk',sans-serif;font-size:14px;color:var(--text);resize:none;min-height:80px;line-height:1.6;}  .paste-area textarea::placeholder{color:var(--text-dim);}  .btn-solve{display:inline-flex;align-items:center;gap:8px;background:var(--accent2);color:#fff;border:none;padding:10px 18px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;border-radius:6px;transition:all 0.15s;white-space:nowrap;align-self:flex-end;}  .btn-solve:hover{background:#1a5bc4;transform:translateY(-1px);}  .btn-solve:disabled{opacity:0.4;cursor:not-allowed;transform:none;}  .status-bar{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:14px 18px;margin-bottom:20px;display:none;}  .status-bar.visible{display:block;}  .status-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}  .status-label{font-size:13px;font-weight:600;color:var(--text);display:flex;align-items:center;gap:8px;}  .status-pct{font-family:'Space Mono',monospace;font-size:12px;color:var(--text-muted);}  .ocr-spinner{width:14px;height:14px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.7s linear infinite;}  .preview-wrap{display:none;margin-bottom:20px;position:relative;}  .preview-wrap.visible{display:block;}  .preview-label{font-size:11px;font-weight:600;letter-spacing:0.08em;text-transform:uppercase;color:var(--text-muted);margin-bottom:8px;font-family:'Space Mono',monospace;}  .preview-img{width:100%;max-height:260px;object-fit:contain;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);display:block;}  .preview-close{position:absolute;top:28px;right:8px;width:28px;height:28px;border:1.5px solid var(--border);background:var(--surface);border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--text-muted);transition:all 0.15s;z-index:2;}  .preview-close:hover{background:var(--accent);color:#fff;border-color:var(--accent);}  .ocr-raw{display:none;margin-bottom:20px;}  .ocr-raw.visible{display:block;}  .ocr-raw-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}  .ocr-raw textarea{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:14px;font-family:'Space Mono',monospace;font-size:12px;color:var(--text-muted);resize:vertical;min-height:80px;max-height:160px;outline:none;line-height:1.5;}  .btn-sm{background:transparent;border:1.5px solid var(--border);color:var(--text-muted);padding:5px 12px;border-radius:4px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px;}  .btn-sm:hover{border-color:var(--accent2);color:var(--accent2);}  .no-results{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:32px 24px;text-align:center;display:none;}  .no-results.visible{display:block;}  .no-results p{font-size:14px;color:var(--text-muted);line-height:1.6;}  .no-results strong{color:var(--text);}  .results-section{display:none;}  .results-section.visible{display:block;}  .results-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;}  .results-title{font-size:14px;font-weight:700;letter-spacing:-0.01em;display:flex;align-items:center;gap:10px;}  .badge-count{background:var(--green);color:#fff;font-size:11px;font-weight:700;padding:2px 8px;border-radius:100px;font-family:'Space Mono',monospace;}  .badge-source{font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;font-family:'Space Mono',monospace;}  .badge-source.ai{background:var(--accent2);color:#fff;}  .badge-source.kb{background:var(--surface2);color:var(--text-muted);border:1px solid var(--border);}  .btn-clear{background:transparent;border:1.5px solid #f0ccc4;color:var(--accent);padding:6px 14px;border-radius:4px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:500;cursor:pointer;transition:all 0.15s;}  .btn-clear:hover{background:#fde8e1;}  .answer-card{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;margin-bottom:12px;overflow:hidden;animation:fadeUp 0.3s ease-out both;}  @keyframes fadeUp{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}  .answer-q{padding:14px 18px 10px;font-size:14px;color:var(--text-muted);line-height:1.5;border-bottom:1px solid var(--surface2);display:flex;gap:10px;}  .q-num{font-family:'Space Mono',monospace;font-size:11px;font-weight:700;color:var(--text-dim);padding-top:2px;flex-shrink:0;}  .answer-a{padding:12px 18px 14px;display:flex;gap:12px;align-items:flex-start;}  .ans-label{background:var(--ink);color:var(--bg);font-family:'Space Mono',monospace;font-size:10px;font-weight:700;letter-spacing:0.08em;padding:3px 8px;border-radius:3px;flex-shrink:0;margin-top:2px;}  .ans-label.ai{background:var(--accent2);}  .ans-text{font-size:15px;font-weight:600;color:var(--text);line-height:1.5;letter-spacing:-0.01em;}  .thinking{font-style:italic;color:var(--text-dim);font-weight:400;font-size:13px;}  .tip-box{margin-top:32px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:18px 20px;display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}  .tip{display:flex;gap:10px;align-items:flex-start;}  .tip-dot{width:8px;height:8px;background:var(--accent);border-radius:50%;flex-shrink:0;margin-top:5px;}  .tip-title{font-size:12px;font-weight:700;margin-bottom:3px;}  .tip-desc{font-size:11px;color:var(--text-muted);line-height:1.5;}  @media(max-width:600px){.tip-box{grid-template-columns:1fr;}.header{flex-direction:column;align-items:flex-start;gap:12px;}}  canvas{display:none;}</style></head><body><div class="app">
-  <div class="header">    <div class="logo">      <div class="logo-mark">        <svg viewBox="0 0 28 28" fill="none" xmlns="http://www.w3.org/2000/svg">          <path d="M6 22 L14 6 L22 22" stroke="#f5f2eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>          <path d="M9 16 H19" stroke="#f5f2eb" stroke-width="2" stroke-linecap="round"/>        </svg>      </div>      <div class="logo-text">        <h1>Homework Solver</h1>        <p>Screen watch · OCR · AI · smarter answers</p>      </div>    </div>    <div class="header-right">      <div class="stat-pill">        <span class="num" id="solved-count">0</span>        <span>solved</span>      </div>    </div>  </div>
-  <div class="watch-panel">    <div class="watch-top">      <div class="watch-info">        <div class="watch-title">Live Screen Watch</div>        <div class="watch-desc">Captures your screen every 3 seconds, OCRs it, then asks the AI for answers.</div>      </div>      <div class="watch-controls">        <span class="countdown" id="countdown"></span>        <button class="btn-watch" id="watch-btn" onclick="window.toggleWatch()">          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>          Watch Screen        </button>      </div>    </div>    <div class="watch-status" id="watch-status">      <div class="pulse"></div>      <span class="watch-status-text" id="watch-status-text">Watching — next capture in 3s</span>    </div>  </div>
-  <div class="model-bar" id="model-bar">    <div class="model-bar-top">      <div class="model-label">        <div class="spinner"></div>        <span id="model-label-text">Loading AI model…</span>      </div>      <span class="model-pct" id="model-pct">0%</span>    </div>    <div class="progress-track"><div class="progress-fill" id="model-fill"></div></div>  </div>
-  <div class="upload-zone" id="upload-zone">    <input type="file" id="file-input" accept="image/*" multiple />    <div class="upload-icon">      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>    </div>    <div class="upload-title">Or drop / upload an image</div>    <p class="upload-desc">Upload a photo or screenshot of your worksheet or textbook page.</p>    <div class="btn-upload">      <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>      Choose file    </div>  </div>
-  <div class="divider">    <div class="divider-line"></div>    <span>or type / paste questions</span>    <div class="divider-line"></div>  </div>
-  <div class="paste-area">    <textarea id="text-input" placeholder="Paste or type your questions here…&#10;&#10;e.g. What is 24 × 7?&#10;Who wrote Romeo and Juliet?&#10;What is the capital of France?"></textarea>    <button class="btn-solve" id="solve-btn" onclick="window.solveText()">      <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>      Solve    </button>  </div>
-  <div class="preview-wrap" id="preview-wrap">    <div class="preview-label">Preview</div>    <img id="preview-img" class="preview-img" src="" alt="preview" />    <button class="preview-close" onclick="window.clearAll()" title="Clear">✕</button>  </div>
-  <div class="status-bar" id="status-bar">    <div class="status-top">      <div class="status-label">        <div class="ocr-spinner"></div>        <span id="status-text">Reading image…</span>      </div>      <span class="status-pct" id="status-pct">0%</span>    </div>    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="background:var(--accent);"></div></div>  </div>
-  <div class="ocr-raw" id="ocr-raw">    <div class="ocr-raw-header">      <div class="preview-label" style="margin:0">Extracted text <span style="color:var(--text-dim);font-weight:400">(editable)</span></div>      <button class="btn-sm" onclick="window.resolveFromOCR()">        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>        Re-solve      </button>    </div>    <textarea id="ocr-text" spellcheck="false"></textarea>  </div>
-  <div class="no-results" id="no-results">    <p><strong>No questions detected.</strong><br>Try a clearer image, or paste your questions directly above.</p>  </div>
-  <div class="results-section" id="results-section">    <div class="results-header">      <div class="results-title">        Answers        <span class="badge-count" id="answer-count">0</span>      </div>      <button class="btn-clear" onclick="window.clearAll()">Clear all</button>    </div>    <div id="answers-list"></div>  </div>
-  <div class="tip-box">    <div class="tip">      <div class="tip-dot"></div>      <div class="tip-body">        <div class="tip-title">Smarter AI</div>        <div class="tip-desc">Uses subject detection + chain-of-thought prompting for much better answers.</div>      </div>    </div>    <div class="tip">      <div class="tip-dot" style="background:var(--accent2)"></div>      <div class="tip-body">        <div class="tip-title">Screen watch</div>        <div class="tip-desc">Click "Watch Screen", pick a window or tab, and it auto-solves every 3 seconds.</div>      </div>    </div>    <div class="tip">      <div class="tip-dot" style="background:var(--green)"></div>      <div class="tip-body">        <div class="tip-title">First load</div>        <div class="tip-desc">The AI model (~250 MB) downloads once and is cached in your browser.</div>      </div>    </div>  </div></div>
-<canvas id="capture-canvas"></canvas>
-<script type="module">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Homework Solver</title>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;700;800&display=swap');
+:root{
+  --bg:#f5f2eb;--surface:#faf8f3;--surface2:#edeae0;--border:#d8d3c5;
+  --text:#1a1714;--muted:#7a7568;--dim:#b0aa9e;--ink:#1a1714;
+  --red:#e8562a;--blue:#2a6ee8;--green:#2a8a4a;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'Syne',system-ui,sans-serif;min-height:100vh;}
+.app{max-width:840px;margin:0 auto;padding:32px 24px;}
 
-// ── State ─────────────────────────────────────────────────────────────────────
-let pipe = null;
-let watchStream = null;
-let watchInterval = null;
-let watchVideo = null;
-let countdownInterval = null;
-let nextCapture = 0;
+.hdr{display:flex;align-items:center;justify-content:space-between;padding-bottom:20px;border-bottom:2.5px solid var(--ink);margin-bottom:28px;}
+.logo{display:flex;align-items:center;gap:14px;}
+.logo-mark{width:46px;height:46px;background:var(--ink);border-radius:6px;display:grid;place-items:center;flex-shrink:0;}
+.logo-mark svg{width:27px;height:27px;}
+.logo h1{font-size:21px;font-weight:800;letter-spacing:-.03em;line-height:1;}
+.logo p{font-size:11px;color:var(--muted);margin-top:3px;font-family:'Space Mono',monospace;}
+.pill{background:var(--ink);color:var(--bg);font-family:'Space Mono',monospace;font-size:11px;padding:5px 14px;border-radius:100px;display:flex;align-items:center;gap:7px;}
+.pill b{font-size:18px;font-weight:700;}
+
+#toast-wrap{position:fixed;top:20px;right:20px;z-index:9999;display:flex;flex-direction:column;gap:10px;pointer-events:none;}
+.toast{background:var(--ink);color:#fff;padding:12px 16px;border-radius:8px;font-size:13px;display:flex;align-items:flex-start;gap:10px;max-width:300px;pointer-events:all;animation:tin .3s ease;box-shadow:0 4px 24px rgba(0,0,0,.25);}
+.toast.good{background:var(--green);}
+.toast.info{background:var(--blue);}
+.toast.warn{background:var(--red);}
+.t-icon{font-size:15px;flex-shrink:0;margin-top:1px;}
+.t-title{font-size:13px;font-weight:700;margin-bottom:2px;}
+.t-msg{font-size:11px;opacity:.85;line-height:1.4;}
+@keyframes tin{from{opacity:0;transform:translateX(30px);}to{opacity:1;transform:translateX(0);}}
+@keyframes tout{from{opacity:1;}to{opacity:0;transform:translateX(30px);}}
+
+.panel{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:16px 20px;margin-bottom:16px;}
+.panel-h{font-size:14px;font-weight:700;margin-bottom:3px;}
+.panel-s{font-size:12px;color:var(--muted);}
+
+.watch-row{display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.watch-live{display:none;align-items:center;gap:8px;margin-top:10px;}
+.watch-live.on{display:flex;}
+.pulse{width:8px;height:8px;background:var(--red);border-radius:50%;animation:pulse 1.2s ease-in-out infinite;flex-shrink:0;}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1);}50%{opacity:.4;transform:scale(.7);}}
+.wt{font-size:11px;color:var(--muted);font-family:'Space Mono',monospace;}
+.cd{font-size:11px;color:var(--dim);font-family:'Space Mono',monospace;}
+
+.sbar{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:12px 16px;margin-bottom:16px;display:none;}
+.sbar.on{display:block;}
+.sbar-top{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+.sbar-lbl{font-size:12px;font-weight:600;display:flex;align-items:center;gap:8px;}
+.sbar-pct{font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);}
+.spin{width:13px;height:13px;border:2px solid var(--border);border-top-color:var(--red);border-radius:50%;animation:spin .7s linear infinite;flex-shrink:0;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.track{height:3px;background:var(--surface2);border-radius:2px;overflow:hidden;}
+.fill{height:100%;background:var(--red);border-radius:2px;transition:width .3s ease;width:0%;}
+
+.upload-zone{border:2px dashed var(--border);border-radius:8px;padding:36px 24px;text-align:center;cursor:pointer;transition:all .2s;background:var(--surface);position:relative;margin-bottom:16px;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--red);background:#fff9f7;}
+.upload-zone input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.uico{width:48px;height:48px;border:2px solid var(--border);border-radius:8px;display:grid;place-items:center;margin:0 auto 14px;background:var(--surface2);transition:all .2s;}
+.upload-zone:hover .uico,.upload-zone.drag .uico{border-color:var(--red);background:#fde8e1;}
+.uico svg{width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:1.5;transition:stroke .2s;}
+.upload-zone:hover .uico svg,.upload-zone.drag .uico svg{stroke:var(--red);}
+.upload-zone h3{font-size:15px;font-weight:700;margin-bottom:5px;}
+.upload-zone p{font-size:11px;color:var(--muted);margin-bottom:14px;line-height:1.5;}
+.fbtn{display:inline-flex;align-items:center;gap:6px;background:var(--ink);color:var(--bg);padding:9px 16px;font-size:12px;font-weight:700;border-radius:5px;pointer-events:none;transition:background .15s;font-family:'Syne',sans-serif;}
+.upload-zone:hover .fbtn,.upload-zone.drag .fbtn{background:var(--red);}
+
+.divider{display:flex;align-items:center;gap:12px;margin:16px 0;}
+.divider-line{flex:1;height:1px;background:var(--border);}
+.divider span{font-size:10px;color:var(--dim);font-family:'Space Mono',monospace;text-transform:uppercase;letter-spacing:.07em;}
+
+.input-wrap{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:14px 16px;display:flex;gap:10px;align-items:flex-start;margin-bottom:16px;transition:border-color .2s;}
+.input-wrap:focus-within{border-color:var(--blue);}
+.input-wrap textarea{flex:1;background:transparent;border:none;outline:none;font-size:13px;color:var(--text);resize:none;min-height:80px;line-height:1.6;font-family:'Syne',sans-serif;}
+.input-wrap textarea::placeholder{color:var(--dim);}
+
+.btn{display:inline-flex;align-items:center;gap:6px;border:none;padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer;border-radius:6px;transition:all .15s;white-space:nowrap;font-family:'Syne',sans-serif;}
+.btn-blue{background:var(--blue);color:#fff;}
+.btn-blue:hover{background:#1a5bc4;}
+.btn-red{background:var(--red);color:#fff;}
+.btn-red:hover{background:#c94420;}
+.btn-ghost{background:transparent;border:1.5px solid var(--border);color:var(--muted);}
+.btn-ghost:hover{border-color:var(--blue);color:var(--blue);}
+.btn-ghost-red{background:transparent;border:1.5px solid #f0ccc4;color:var(--red);}
+.btn-ghost-red:hover{background:#fde8e1;}
+
+.prev-wrap{display:none;margin-bottom:16px;position:relative;}
+.prev-wrap.on{display:block;}
+.prev-lbl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);margin-bottom:7px;font-family:'Space Mono',monospace;}
+.prev-img{width:100%;max-height:220px;object-fit:contain;border-radius:6px;border:1.5px solid var(--border);background:var(--surface);display:block;}
+.prev-x{position:absolute;top:26px;right:8px;width:26px;height:26px;border:1.5px solid var(--border);background:var(--surface);border-radius:50%;cursor:pointer;display:grid;place-items:center;font-size:13px;color:var(--muted);z-index:2;transition:all .15s;}
+.prev-x:hover{background:var(--red);color:#fff;border-color:var(--red);}
+
+.ocr-box{display:none;margin-bottom:16px;}
+.ocr-box.on{display:block;}
+.ocr-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:7px;}
+.ocr-lbl{font-size:10px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-family:'Space Mono',monospace;}
+.ocr-box textarea{width:100%;background:var(--surface);border:1.5px solid var(--border);border-radius:7px;padding:12px 14px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);resize:vertical;min-height:70px;max-height:140px;outline:none;line-height:1.5;transition:border-color .2s;}
+.ocr-box textarea:focus{border-color:var(--blue);}
+
+.no-res{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:28px;text-align:center;display:none;}
+.no-res.on{display:block;}
+.no-res p{font-size:13px;color:var(--muted);line-height:1.6;}
+.results{display:none;}
+.results.on{display:block;}
+.res-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;}
+.res-title{font-size:14px;font-weight:700;display:flex;align-items:center;gap:9px;}
+.cnt{background:var(--green);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:100px;font-family:'Space Mono',monospace;}
+
+.card{background:var(--surface);border:1.5px solid var(--border);border-radius:8px;margin-bottom:10px;overflow:hidden;animation:fup .3s ease-out both;}
+@keyframes fup{from{opacity:0;transform:translateY(6px);}to{opacity:1;transform:translateY(0);}}
+.card-q{padding:12px 16px 9px;font-size:13px;color:var(--muted);line-height:1.5;border-bottom:1px solid var(--surface2);display:flex;gap:9px;}
+.qn{font-family:'Space Mono',monospace;font-size:10px;font-weight:700;color:var(--dim);padding-top:2px;flex-shrink:0;}
+.card-a{padding:11px 16px 13px;display:flex;gap:10px;align-items:flex-start;}
+.tag{font-family:'Space Mono',monospace;font-size:9px;font-weight:700;letter-spacing:.08em;padding:3px 8px;border-radius:3px;flex-shrink:0;margin-top:2px;color:#fff;}
+.tag.kb{background:var(--ink);}
+.tag.math{background:var(--green);}
+.tag.err{background:var(--muted);}
+.ans{font-size:13px;font-weight:600;color:var(--text);line-height:1.55;white-space:pre-wrap;word-break:break-word;}
+.ans.dim{color:var(--muted);font-weight:400;}
+.ans.mono{font-family:'Space Mono',monospace;font-size:12px;}
+.ans.thinking{font-style:italic;color:var(--dim);font-weight:400;}
+.ocr-badge{font-family:'Space Mono',monospace;font-size:9px;color:var(--dim);margin-top:4px;display:block;}
+
+.steps-btn{background:transparent;border:none;font-size:11px;color:var(--blue);cursor:pointer;font-family:'Syne',sans-serif;padding:0;margin-top:5px;display:flex;align-items:center;gap:4px;font-weight:600;}
+.steps-box{display:none;margin-top:7px;background:var(--surface2);border-radius:5px;padding:10px 12px;font-family:'Space Mono',monospace;font-size:11px;color:var(--muted);line-height:1.6;white-space:pre-wrap;}
+.steps-box.on{display:block;}
+
+.tips{margin-top:28px;background:var(--surface);border:1.5px solid var(--border);border-radius:8px;padding:16px 18px;display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
+.tip{display:flex;gap:9px;align-items:flex-start;}
+.tip-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;margin-top:5px;}
+.tip-h{font-size:11px;font-weight:700;margin-bottom:2px;}
+.tip-p{font-size:10px;color:var(--muted);line-height:1.5;}
+@media(max-width:580px){.tips{grid-template-columns:1fr;}.hdr{flex-direction:column;align-items:flex-start;gap:10px;}}
+canvas{display:none;}
+</style>
+</head>
+<body>
+<div id="toast-wrap"></div>
+<div class="app">
+
+  <div class="hdr">
+    <div class="logo">
+      <div class="logo-mark">
+        <svg viewBox="0 0 28 28" fill="none">
+          <path d="M6 22L14 6l8 16" stroke="#f5f2eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M9 16h10" stroke="#f5f2eb" stroke-width="2.2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div>
+        <h1>Homework Solver</h1>
+        <p>Real OCR · Screen watch · Algebra · KB · Zero API</p>
+      </div>
+    </div>
+    <div class="pill"><b id="solved-count">0</b>&nbsp;solved</div>
+  </div>
+
+  <div class="panel">
+    <div class="watch-row">
+      <div>
+        <div class="panel-h">Live Screen Watch</div>
+        <div class="panel-s">Share your screen — captures every 4 s, <strong>OCR reads it automatically</strong>, then solves the questions it finds.</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:8px;">
+        <span class="cd" id="cd"></span>
+        <button class="btn btn-blue" id="watch-btn" onclick="toggleWatch()">
+          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg>
+          Watch Screen
+        </button>
+      </div>
+    </div>
+    <div class="watch-live" id="watch-live">
+      <div class="pulse"></div>
+      <span class="wt" id="wt">Watching — OCR scanning every 4 s</span>
+    </div>
+  </div>
+
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept="image/*">
+    <div class="uico">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>
+    </div>
+    <h3>Drop or upload an image</h3>
+    <p>Photo of your worksheet — OCR extracts text automatically, no typing needed.</p>
+    <div class="fbtn">
+      <svg width="13" height="13" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      Choose file
+    </div>
+  </div>
+
+  <div class="divider"><div class="divider-line"></div><span>or type / paste questions</span><div class="divider-line"></div></div>
+
+  <div class="input-wrap">
+    <textarea id="text-input" placeholder="Type or paste questions here…&#10;&#10;e.g.  Solve 3x + 7 = 22&#10;       x + y = 5 and 2x - y = 4&#10;       Differentiate x³ + 2x&#10;       What is the capital of France?&#10;       Who wrote Romeo and Juliet?"></textarea>
+    <button class="btn btn-blue" onclick="solveText()">
+      <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+      Solve
+    </button>
+  </div>
+
+  <div class="sbar" id="sbar">
+    <div class="sbar-top">
+      <div class="sbar-lbl"><div class="spin"></div><span id="sbar-txt">Reading image…</span></div>
+      <span class="sbar-pct" id="sbar-pct">0%</span>
+    </div>
+    <div class="track"><div class="fill" id="sbar-fill"></div></div>
+  </div>
+
+  <div class="prev-wrap" id="prev-wrap">
+    <div class="prev-lbl">Preview</div>
+    <img id="prev-img" class="prev-img" src="" alt="">
+    <button class="prev-x" onclick="clearAll()">✕</button>
+  </div>
+
+  <div class="ocr-box" id="ocr-box">
+    <div class="ocr-hdr">
+      <div class="ocr-lbl">Extracted text <span style="color:var(--dim);font-weight:400;text-transform:none;font-family:inherit;">(editable)</span></div>
+      <button class="btn btn-ghost" style="font-size:11px;padding:5px 11px;" onclick="resolveOCR()">
+        <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><polyline points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+        Re-solve
+      </button>
+    </div>
+    <textarea id="ocr-text" spellcheck="false" placeholder="OCR-extracted text will appear here…"></textarea>
+  </div>
+
+  <div class="no-res" id="no-res"><p><strong>No questions detected.</strong><br>Try a clearer image, edit the extracted text above, or type questions directly.</p></div>
+
+  <div class="results" id="results">
+    <div class="res-hdr">
+      <div class="res-title">Answers <span class="cnt" id="ans-count">0</span></div>
+      <button class="btn btn-ghost-red" onclick="clearAll()">Clear all</button>
+    </div>
+    <div id="ans-list"></div>
+  </div>
+
+  <div class="tips">
+    <div class="tip"><div class="tip-dot" style="background:var(--red)"></div><div><div class="tip-h">Real OCR</div><div class="tip-p">Tesseract.js reads your screen or image — no typing, fully offline.</div></div></div>
+    <div class="tip"><div class="tip-dot" style="background:var(--green)"></div><div><div class="tip-h">Algebra engine</div><div class="tip-p">Equations, simultaneous systems, derivatives, integrals — all local.</div></div></div>
+    <div class="tip"><div class="tip-dot" style="background:var(--blue)"></div><div><div class="tip-h">Knowledge base</div><div class="tip-p">Capitals, science, history, literature, maths formulas — instant answers.</div></div></div>
+  </div>
+</div>
+<canvas id="cap"></canvas>
+
+<script>
+// ── TOASTS ────────────────────────────────────────────────
+function toast(title, msg, type, dur) {
+  dur = dur || 4000;
+  const tc = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = 'toast' + (type ? ' ' + type : '');
+  const icon = type === 'good' ? '✅' : type === 'info' ? 'ℹ️' : type === 'warn' ? '⚠️' : '📢';
+  el.innerHTML = `<div class="t-icon">${icon}</div><div><div class="t-title">${esc(title)}</div>${msg ? `<div class="t-msg">${msg}</div>` : ''}</div>`;
+  tc.appendChild(el);
+  setTimeout(() => { el.style.animation = 'tout .3s ease forwards'; setTimeout(() => el.remove(), 300); }, dur);
+}
+
+// ── STATE ─────────────────────────────────────────────────
 let totalSolved = 0;
-let lastOcrText = '';
-let modelLoadPromise = null;
+let watchStream = null, watchVideo = null, watchInterval = null, cdInt = null, cdSec = 4;
+let ocrWorker = null, ocrBusy = false, lastOcrText = '';
 
-// ── Expanded Knowledge Base ───────────────────────────────────────────────────
-const KB = {
-  capitals: {
-    "france":"Paris","germany":"Berlin","spain":"Madrid","italy":"Rome","japan":"Tokyo",
-    "china":"Beijing","india":"New Delhi","australia":"Canberra","brazil":"Brasília",
-    "canada":"Ottawa","usa":"Washington D.C.","united states":"Washington D.C.",
-    "uk":"London","united kingdom":"London","russia":"Moscow","mexico":"Mexico City",
-    "south africa":"Pretoria","egypt":"Cairo","ukraine":"Kyiv","poland":"Warsaw",
-    "netherlands":"Amsterdam","sweden":"Stockholm","norway":"Oslo","denmark":"Copenhagen",
-    "portugal":"Lisbon","greece":"Athens","ireland":"Dublin","argentina":"Buenos Aires",
-    "chile":"Santiago","peru":"Lima","colombia":"Bogotá","venezuela":"Caracas",
-    "nigeria":"Abuja","kenya":"Nairobi","ethiopia":"Addis Ababa","ghana":"Accra",
-    "tanzania":"Dodoma","south korea":"Seoul","north korea":"Pyongyang","vietnam":"Hanoi",
-    "thailand":"Bangkok","indonesia":"Jakarta","pakistan":"Islamabad","bangladesh":"Dhaka",
-    "iran":"Tehran","iraq":"Baghdad","saudi arabia":"Riyadh","turkey":"Ankara",
-    "israel":"Jerusalem","afghanistan":"Kabul","myanmar":"Naypyidaw",
-    "new zealand":"Wellington","philippines":"Manila","malaysia":"Kuala Lumpur",
-    "switzerland":"Bern","austria":"Vienna","belgium":"Brussels","czech republic":"Prague",
-    "hungary":"Budapest","romania":"Bucharest","finland":"Helsinki","ukraine":"Kyiv",
-  },
-  authors: {
-    "romeo and juliet":"William Shakespeare","hamlet":"William Shakespeare",
-    "macbeth":"William Shakespeare","othello":"William Shakespeare",
-    "a midsummer night's dream":"William Shakespeare","the tempest":"William Shakespeare",
-    "pride and prejudice":"Jane Austen","sense and sensibility":"Jane Austen",
-    "emma":"Jane Austen","northanger abbey":"Jane Austen",
-    "1984":"George Orwell","animal farm":"George Orwell",
-    "to kill a mockingbird":"Harper Lee","go set a watchman":"Harper Lee",
-    "the great gatsby":"F. Scott Fitzgerald","tender is the night":"F. Scott Fitzgerald",
-    "frankenstein":"Mary Shelley","dracula":"Bram Stoker",
-    "great expectations":"Charles Dickens","oliver twist":"Charles Dickens",
-    "a tale of two cities":"Charles Dickens","david copperfield":"Charles Dickens",
-    "harry potter":"J.K. Rowling","the hobbit":"J.R.R. Tolkien",
-    "lord of the rings":"J.R.R. Tolkien","the silmarillion":"J.R.R. Tolkien",
-    "brave new world":"Aldous Huxley","fahrenheit 451":"Ray Bradbury",
-    "the catcher in the rye":"J.D. Salinger","of mice and men":"John Steinbeck",
-    "the grapes of wrath":"John Steinbeck","east of eden":"John Steinbeck",
-    "lord of the flies":"William Golding","the hunger games":"Suzanne Collins",
-    "twilight":"Stephenie Meyer","the da vinci code":"Dan Brown",
-    "gone with the wind":"Margaret Mitchell","the alchemist":"Paulo Coelho",
-    "don quixote":"Miguel de Cervantes","war and peace":"Leo Tolstoy",
-    "anna karenina":"Leo Tolstoy","crime and punishment":"Fyodor Dostoevsky",
-    "the brothers karamazov":"Fyodor Dostoevsky","moby dick":"Herman Melville",
-    "the odyssey":"Homer","the iliad":"Homer","the aeneid":"Virgil",
-    "beowulf":"Anonymous","canterbury tales":"Geoffrey Chaucer",
-    "paradise lost":"John Milton","divine comedy":"Dante Alighieri",
-  },
-  science: {
-    "speed of light":"299,792,458 m/s (≈ 3×10⁸ m/s) in a vacuum",
-    "speed of sound":"343 m/s in air at 20°C (sea level)",
-    "gravitational acceleration":"9.81 m/s² (≈ 9.8 m/s²) on Earth's surface",
-    "boiling point of water":"100°C / 212°F at standard atmospheric pressure",
-    "freezing point of water":"0°C / 32°F",
-    "absolute zero":"−273.15°C / −459.67°F / 0 Kelvin",
-    "avogadro's number":"6.022 × 10²³ mol⁻¹",
-    "planck's constant":"6.626 × 10⁻³⁴ J·s",
-    "charge of electron":"−1.602 × 10⁻¹⁹ coulombs",
-    "mass of proton":"1.673 × 10⁻²⁷ kg",
-    "how many planets":"8 planets in the Solar System (Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune)",
-    "how many continents":"7 continents (Africa, Antarctica, Asia, Australia/Oceania, Europe, North America, South America)",
-    "how many bones":"206 bones in the adult human body",
-    "how many chromosomes":"46 chromosomes (23 pairs) in a human cell",
-    "largest country":"Russia (17.1 million km²)",
-    "smallest country":"Vatican City (0.44 km²)",
-    "longest river":"Nile (~6,650 km) — though the Amazon (~6,400 km) is sometimes disputed as longer",
-    "highest mountain":"Mount Everest (8,849 m / 29,032 ft) above sea level",
-    "deepest ocean":"Mariana Trench (~11,034 m / 36,201 ft) in the Pacific Ocean",
-    "largest ocean":"Pacific Ocean",
-    "largest planet":"Jupiter",
-    "smallest planet":"Mercury",
-    "closest star":"Proxima Centauri (~4.24 light-years away)",
-    "distance to moon":"~384,400 km (average)",
-    "distance to sun":"~149.6 million km (1 AU)",
-    "age of universe":"~13.8 billion years",
-    "age of earth":"~4.54 billion years",
-    "dna stands for":"Deoxyribonucleic acid",
-    "rna stands for":"Ribonucleic acid",
-    "atp stands for":"Adenosine triphosphate",
-    "photosynthesis equation":"6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂",
-    "cellular respiration":"C₆H₁₂O₆ + 6O₂ → 6CO₂ + 6H₂O + ATP",
-    "mitosis stages":"Prophase → Metaphase → Anaphase → Telophase → Cytokinesis",
-    "meiosis":"Two divisions (Meiosis I and II) producing 4 haploid daughter cells",
-    "newton's first law":"An object at rest stays at rest; an object in motion stays in motion unless acted on by an external force (Law of Inertia)",
-    "newton's second law":"F = ma (Force = mass × acceleration)",
-    "newton's third law":"For every action there is an equal and opposite reaction",
-    "ohm's law":"V = IR (Voltage = Current × Resistance)",
-    "ideal gas law":"PV = nRT",
-    "e=mc2":"Energy = mass × speed of light squared (Einstein's mass-energy equivalence)",
-  },
-  history: {
-    "world war 1 start":"1914 (assassinated Archduke Franz Ferdinand triggered it)",
-    "world war 1 end":"1918 (Armistice signed 11 November 1918)",
-    "world war 2 start":"1939 (Germany invaded Poland on 1 September 1939)",
-    "world war 2 end":"1945 (V-E Day: 8 May; V-J Day: 15 August)",
-    "american civil war start":"1861",
-    "american civil war end":"1865",
-    "french revolution start":"1789",
-    "french revolution end":"1799",
-    "when was america founded":"1776 (Declaration of Independence signed 4 July 1776)",
-    "when did the berlin wall fall":"1989 (9 November 1989)",
-    "cold war start":"1947",
-    "cold war end":"1991 (dissolution of the Soviet Union)",
-    "first moon landing":"20 July 1969 — Apollo 11 (Neil Armstrong and Buzz Aldrin)",
-    "who landed on the moon first":"Neil Armstrong (20 July 1969, Apollo 11)",
-    "magna carta":"Signed in 1215 by King John of England",
-    "who invented the telephone":"Alexander Graham Bell (patented 1876)",
-    "who invented the light bulb":"Thomas Edison (practical incandescent bulb, 1879)",
-    "who invented the printing press":"Johannes Gutenberg (~1440)",
-    "who invented the airplane":"Wright Brothers — Orville and Wilbur Wright (1903 first flight)",
-    "who invented the internet":"ARPANET (1969); Tim Berners-Lee invented the World Wide Web (1989)",
-    "french revolution":"A period of radical political and social change in France (1789–1799) that overthrew the monarchy",
-    "industrial revolution":"Period of rapid industrialisation (approx. 1760–1840) beginning in Britain",
-    "renaissance":"Cultural movement (roughly 14th–17th century) marking the transition from the Middle Ages to modernity",
-  },
-  maths: {
-    "value of pi":"π ≈ 3.14159265358979…",
-    "what is pi":"π ≈ 3.14159265358979…",
-    "euler's number":"e ≈ 2.71828182845904…",
-    "what is e":"Euler's number ≈ 2.71828182845904…",
-    "pythagoras theorem":"a² + b² = c² (for right-angled triangles)",
-    "pythagorean theorem":"a² + b² = c² (for right-angled triangles)",
-    "quadratic formula":"x = (−b ± √(b²−4ac)) / 2a",
-    "area of circle":"A = πr²",
-    "circumference of circle":"C = 2πr",
-    "area of triangle":"A = ½ × base × height",
-    "area of rectangle":"A = length × width",
-    "area of square":"A = side²",
-    "volume of sphere":"V = (4/3)πr³",
-    "volume of cylinder":"V = πr²h",
-    "volume of cone":"V = (1/3)πr²h",
-    "volume of cube":"V = side³",
-    "surface area of sphere":"SA = 4πr²",
-    "sine rule":"a/sin(A) = b/sin(B) = c/sin(C)",
-    "cosine rule":"c² = a² + b² − 2ab·cos(C)",
-    "sum of angles in triangle":"180°",
-    "sum of angles in quadrilateral":"360°",
-    "sum of interior angles":"(n−2) × 180° for an n-sided polygon",
-    "what is mean":"Sum of all values divided by the number of values",
-    "what is median":"The middle value when data is sorted in order",
-    "what is mode":"The value that appears most often in a dataset",
-    "what is range":"Maximum value minus minimum value",
-    "what is standard deviation":"A measure of how spread out numbers are from the mean",
-    "binomial theorem":"(a+b)ⁿ = Σ C(n,k)·aⁿ⁻ᵏ·bᵏ for k=0 to n",
-    "derivative of sin":"cos(x)",
-    "derivative of cos":"−sin(x)",
-    "derivative of tan":"sec²(x)",
-    "derivative of ln x":"1/x",
-    "derivative of eˣ":"eˣ",
-    "integral of sin":"−cos(x) + C",
-    "integral of cos":"sin(x) + C",
-    "integral of eˣ":"eˣ + C",
-  },
-  english: {
-    "what is a simile":"A figure of speech comparing two unlike things using 'like' or 'as' (e.g. 'brave as a lion')",
-    "what is a metaphor":"A figure of speech describing something as if it were something else, without using 'like' or 'as' (e.g. 'life is a journey')",
-    "what is alliteration":"Repetition of the same consonant sound at the start of nearby words (e.g. 'Peter Piper picked…')",
-    "what is onomatopoeia":"A word that phonetically imitates the sound it describes (e.g. buzz, hiss, crash)",
-    "what is personification":"Giving human qualities or characteristics to non-human things",
-    "what is hyperbole":"Deliberate extreme exaggeration for emphasis (e.g. 'I've told you a million times')",
-    "what is irony":"A contrast between what is expected/said and what actually occurs or is meant",
-    "what is a sonnet":"A 14-line poem, typically in iambic pentameter, with a specific rhyme scheme",
-    "what is iambic pentameter":"A line of poetry with 10 syllables: 5 pairs of unstressed-stressed syllables (da-DUM repeated 5 times)",
-    "what is a protagonist":"The main character of a story",
-    "what is an antagonist":"The character who opposes the protagonist",
-    "what is foreshadowing":"A literary device hinting at events that will occur later in the story",
-    "what is a soliloquy":"A dramatic device where a character speaks their inner thoughts aloud, alone on stage",
-    "what is an oxymoron":"Two contradictory words placed together (e.g. 'bittersweet', 'deafening silence')",
-    "what is a thesis statement":"A sentence that summarises the main argument or claim of an essay",
-    "nouns":"Name people, places, things, or ideas",
-    "verbs":"Words that express actions, states, or occurrences",
-    "adjectives":"Words that describe or modify nouns",
-    "adverbs":"Words that modify verbs, adjectives, or other adverbs (often end in -ly)",
-    "pronouns":"Words that replace nouns (e.g. he, she, they, it, we)",
-    "prepositions":"Words showing position or relationship (e.g. on, in, under, beside)",
-    "conjunctions":"Words that connect clauses or sentences (e.g. and, but, because, although)",
-  },
-  geography: {
-    "largest continent":"Asia",
-    "smallest continent":"Australia (or Oceania)",
-    "longest mountain range":"Andes (South America, ~7,000 km)",
-    "largest desert":"Antarctic Desert (~14 million km²); Sahara is the largest hot desert",
-    "largest lake":"Caspian Sea (saltwater); Lake Superior (freshwater)",
-    "deepest lake":"Lake Baikal (Russia, ~1,642 m deep)",
-    "amazon rainforest":"Covers ~5.5 million km² across South America, mainly Brazil",
-    "great barrier reef":"World's largest coral reef system, off Queensland, Australia",
-    "sahara desert":"Largest hot desert in the world (~9.2 million km²), in North Africa",
-    "nile river":"Flows through northeastern Africa (~6,650 km); passes through Sudan and Egypt",
-    "amazon river":"Largest river by discharge volume; flows through South America",
-    "prime meridian":"0° longitude; passes through Greenwich, London",
-    "international date line":"180° longitude; crossing it changes the date",
-    "tropic of cancer":"23.5°N latitude",
-    "tropic of capricorn":"23.5°S latitude",
-    "arctic circle":"66.5°N latitude",
-    "antarctic circle":"66.5°S latitude",
-    "what is latitude":"Angular distance north or south of the equator, measured in degrees",
-    "what is longitude":"Angular distance east or west of the prime meridian, measured in degrees",
-    "what is an ecosystem":"A biological community of organisms interacting with their physical environment",
-    "what is erosion":"The process of wearing away earth's surface by wind, water, ice, or other natural agents",
-    "what is plate tectonics":"The theory that Earth's lithosphere is divided into tectonic plates that move",
-  },
-};
-
-// ── Smarter KB lookup ─────────────────────────────────────────────────────────
-function kbSolve(q) {
-  const lq = q.toLowerCase().trim().replace(/[?!.]+$/, '').trim();
-
-  // ── Direct arithmetic expressions ──────────────────────────────────────────
-  const mathExpr = lq.match(/^(?:what is |calculate |compute |evaluate |simplify |work out |find |solve )?([\d\s\+\-\*\/\^\(\)\.]+)\s*[\?\.]*$/);
-  if (mathExpr) {
-    try {
-      let expr = mathExpr[1].replace(/\^/g,'**').trim();
-      const r = Function('"use strict";return(' + expr + ')')();
-      if (typeof r === 'number' && isFinite(r))
-        return Number.isInteger(r) ? String(r) : parseFloat(r.toFixed(10)).toString();
-    } catch(e) {}
-  }
-
-  // ── Word-form arithmetic ────────────────────────────────────────────────────
-  const mul = lq.match(/(\d+(?:\.\d+)?)\s*(?:times|multiplied by|×|x)\s*(\d+(?:\.\d+)?)/);
-  if (mul) return String(parseFloat(mul[1]) * parseFloat(mul[2]));
-  const div = lq.match(/(\d+(?:\.\d+)?)\s*(?:divided by|÷|over)\s*(\d+(?:\.\d+)?)/);
-  if (div) { const r = parseFloat(div[1]) / parseFloat(div[2]); return Number.isInteger(r) ? String(r) : r.toFixed(6).replace(/\.?0+$/, ''); }
-  const add = lq.match(/(\d+(?:\.\d+)?)\s*(?:plus|\+|added to)\s*(\d+(?:\.\d+)?)/);
-  if (add) return String(parseFloat(add[1]) + parseFloat(add[2]));
-  const sub = lq.match(/(\d+(?:\.\d+)?)\s*(?:minus|subtract(?:ed)?(?:\s+from)?|−)\s*(\d+(?:\.\d+)?)/);
-  if (sub) return String(parseFloat(sub[1]) - parseFloat(sub[2]));
-  const pct = lq.match(/(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)/);
-  if (pct) return String((parseFloat(pct[1]) / 100) * parseFloat(pct[2]));
-  const sqrtM = lq.match(/(?:square root|sqrt|√)\s*(?:of\s*)?(\d+(?:\.\d+)?)/);
-  if (sqrtM) { const r = Math.sqrt(parseFloat(sqrtM[1])); return Number.isInteger(r) ? String(r) : r.toFixed(6).replace(/\.?0+$/, ''); }
-  const squaredM = lq.match(/(\d+(?:\.\d+)?)\s*(?:squared|to the power of 2|\^2)/);
-  if (squaredM) return String(Math.pow(parseFloat(squaredM[1]), 2));
-  const cubedM = lq.match(/(\d+(?:\.\d+)?)\s*(?:cubed|to the power of 3|\^3)/);
-  if (cubedM) return String(Math.pow(parseFloat(cubedM[1]), 3));
-  const powM = lq.match(/(\d+(?:\.\d+)?)\s*(?:to the power of|\^)\s*(\d+(?:\.\d+)?)/);
-  if (powM) return String(Math.pow(parseFloat(powM[1]), parseFloat(powM[2])));
-
-  // ── Capital city ────────────────────────────────────────────────────────────
-  const capM = lq.match(/capital(?:\s+city)?\s+of\s+(?:the\s+)?([a-z\s]+)/);
-  if (capM && KB.capitals[capM[1].trim()]) return KB.capitals[capM[1].trim()];
-  const ofCapM = lq.match(/([a-z\s]+?)'s?\s+capital/);
-  if (ofCapM && KB.capitals[ofCapM[1].trim()]) return KB.capitals[ofCapM[1].trim()];
-
-  // ── Author lookups ──────────────────────────────────────────────────────────
-  const wrotM = lq.match(/who\s+(?:wrote|authored|created|penned)\s+(?:the\s+book\s+)?(?:the\s+|a\s+)?['"]?(.+?)['"]?\s*[\?\.]*$/);
-  if (wrotM) {
-    const title = wrotM[1].trim().toLowerCase();
-    if (KB.authors[title]) return KB.authors[title];
-    for (const [k, v] of Object.entries(KB.authors)) if (title.includes(k) || k.includes(title)) return v;
-  }
-
-  // ── Scan all KB sections by keyword match ──────────────────────────────────
-  const sections = [KB.maths, KB.science, KB.history, KB.english, KB.geography];
-  for (const section of sections) {
-    // Exact key match
-    if (section[lq]) return section[lq];
-    // Contains key
-    for (const [k, v] of Object.entries(section)) {
-      if (lq.includes(k) || k.includes(lq)) return v;
+// ── OCR (Tesseract.js) ────────────────────────────────────
+async function getOcrWorker() {
+  if (ocrWorker) return ocrWorker;
+  showSbar('Initialising OCR engine…', 5);
+  ocrWorker = await Tesseract.createWorker('eng', 1, {
+    logger: m => {
+      if (m.status === 'recognizing text') showSbar('Reading text from image…', Math.round(10 + m.progress * 80));
+      else if (m.status === 'loading tesseract core') showSbar('Loading OCR core…', 8);
+      else if (m.status === 'initializing tesseract') showSbar('Initialising Tesseract…', 12);
+      else if (m.status === 'loading language traineddata') showSbar('Loading language data…', 20);
     }
-  }
-
-  // ── Fallback spot checks ────────────────────────────────────────────────────
-  if (/\bpi\b/.test(lq) && /\bvalue\b|\bwhat\b/.test(lq)) return 'π ≈ 3.14159265358979…';
-  if (/gravity|gravitational/.test(lq)) return '9.81 m/s² (Earth surface)';
-
-  return null;
+  });
+  return ocrWorker;
 }
 
-// ── Detect subject of question ────────────────────────────────────────────────
-function detectSubject(question) {
-  const lq = question.toLowerCase();
-  if (/\d[\+\-\*\/\^]|\btimes\b|\bdivide\b|\bsquare root\b|\bintegral\b|\bderivative\b|\bsolve for\b|\bequation\b|\bcalculate\b/.test(lq)) return 'mathematics';
-  if (/\bwho wrote\b|\bauthor\b|\bcharacter\b|\bpoem\b|\bsonnet\b|\bnovel\b|\bplay\b|\bstanza\b|\bmetaphor\b|\bsimile\b|\btheme of\b|\bnarrator\b/.test(lq)) return 'English Literature';
-  if (/\bgrammar\b|\bverb\b|\bnoun\b|\badjective\b|\bpronoun\b|\badverb\b|\bsentence\b|\bconjunction\b|\bpunctuation\b/.test(lq)) return 'English Language / Grammar';
-  if (/\batom\b|\belement\b|\bperiodic table\b|\bchemical\b|\bmolecule\b|\bbond\b|\bacid\b|\bbase\b|\breaction\b|\bcovalent\b|\bionic\b/.test(lq)) return 'Chemistry';
-  if (/\bforce\b|\benergy\b|\bvelocity\b|\bmomentum\b|\bwave\b|\bfrequency\b|\belectricity\b|\bmagnet\b|\bpressure\b|\bwork done\b|\bpower\b/.test(lq)) return 'Physics';
-  if (/\bcell\b|\bphotosynthesis\b|\brespiration\b|\bdna\b|\bevolution\b|\becosystem\b|\borgan\b|\bprokaryote\b|\beukaryote\b|\bgenetics\b|\binheritance\b/.test(lq)) return 'Biology';
-  if (/\bwhen did\b|\bwho was\b.*\b(king|queen|president|emperor)\b|\bwar\b|\brevolution\b|\bempire\b|\btreat[iy]\b|\bhistorical\b|\bcivilisation\b|\bengland\b.*\bcentury\b|\bworld war\b/.test(lq)) return 'History';
-  if (/\bcapital\b|\bcountry\b|\bcontinent\b|\bocean\b|\briver\b|\bmountain\b|\bclimate\b|\blatitude\b|\blongitude\b|\bdesert\b|\bpopulation\b|\bgdp\b|\beconomy\b/.test(lq)) return 'Geography';
-  if (/\bcomputer\b|\balgorithm\b|\bprogramming\b|\bbinary\b|\bcpu\b|\bsoftware\b|\bhardware\b|\bnetwork\b|\bos\b|\bbits\b|\bbytes\b/.test(lq)) return 'Computer Science';
-  return 'general knowledge';
-}
-
-// ── Build a smarter chain-of-thought prompt ────────────────────────────────────
-function buildPrompt(question, subject) {
-  // Tailor instruction based on subject type
-  const subjectHint = subject !== 'general knowledge'
-    ? `This is a ${subject} question.`
-    : 'This is a general knowledge question.';
-
-  // For maths, ask for step-by-step working
-  const style = (subject === 'mathematics')
-    ? 'Show your working step by step, then state the final answer clearly.'
-    : 'Give a clear, accurate, and concise answer suitable for a student.';
-
-  return `You are a knowledgeable and helpful homework tutor. ${subjectHint}
-
-Question: ${question}
-
-Instructions: ${style} Do not repeat the question. Do not add unnecessary caveats. Answer directly and helpfully.
-
-Answer:`;
-}
-
-// ── Model loading ─────────────────────────────────────────────────────────────
-function initModelLoad() {
-  if (modelLoadPromise) return modelLoadPromise;
-  modelLoadPromise = (async () => {
-    showModelBar(true);
-    try {
-      const transformers = await import('https://cdn.jsdelivr.net/npm/@xenova/transformers@2.17.2/dist/transformers.min.js');
-      transformers.env.allowLocalModels = false;
-      pipe = await transformers.pipeline('text2text-generation', 'Xenova/LaMini-Flan-T5-248M', {
-        progress_callback: (p) => {
-          if (p.status === 'downloading') {
-            const pct = p.total ? Math.round((p.loaded / p.total) * 100) : 0;
-            setModelBar(`Downloading model… (${p.file || ''})`, pct);
-          } else if (p.status === 'loading') {
-            setModelBar('Loading model into memory…', 95);
-          }
-        }
-      });
-      setModelBar('AI model ready ✓', 100);
-      setTimeout(() => showModelBar(false), 1500);
-      return true;
-    } catch (err) {
-      console.error("AI Model failed to load:", err);
-      setModelBar('AI load failed — using expanded offline knowledge only', 100);
-      setTimeout(() => showModelBar(false), 4000);
-      return false;
-    }
-  })();
-  return modelLoadPromise;
-}
-
-function showModelBar(show) { document.getElementById('model-bar').classList.toggle('visible', show); }
-function setModelBar(text, pct) {
-  document.getElementById('model-label-text').textContent = text;
-  document.getElementById('model-pct').textContent = pct + '%';
-  document.getElementById('model-fill').style.width = pct + '%';
-}
-
-// ── Smarter AI answer ─────────────────────────────────────────────────────────
-async function aiAnswer(question) {
-  const isLoaded = await initModelLoad();
-  if (!isLoaded || !pipe) return null;
-
-  const subject = detectSubject(question);
-  const prompt = buildPrompt(question, subject);
-
+async function runOCR(source) {
+  if (ocrBusy) return null;
+  ocrBusy = true;
   try {
-    const out = await pipe(prompt, {
-      max_new_tokens: 200,      // longer answers allowed
-      num_beams: 4,             // more search breadth = better quality
-      early_stopping: true,
-      repetition_penalty: 1.3,  // strongly penalise loops
-      no_repeat_ngram_size: 3,  // prevent 3-gram repetition
-      length_penalty: 1.2,      // encourage complete answers
-    });
-
-    let text = (out[0]?.generated_text || '').trim();
-
-    // Strip prompt echo if model repeats it
-    if (text.toLowerCase().startsWith('answer:')) text = text.slice(7).trim();
-    const qLower = question.toLowerCase().slice(0, 30);
-    if (text.toLowerCase().startsWith(qLower)) text = text.slice(qLower.length).trim();
-
-    // Strip leading punctuation artifacts
-    text = text.replace(/^[\:\-\.\,\s]+/, '').trim();
-
-    // Truncate at sentence boundary if very long
-    if (text.length > 400) {
-      const lastDot = text.lastIndexOf('.', 400);
-      if (lastDot > 100) text = text.slice(0, lastDot + 1);
-    }
-
-    return text.length > 3 ? text : null;
-  } catch(e) {
+    const worker = await getOcrWorker();
+    showSbar('Recognising text…', 30);
+    const result = await worker.recognize(source);
+    const text = result.data.text.trim();
+    hideSbar();
+    ocrBusy = false;
+    return text || null;
+  } catch (err) {
+    hideSbar(); ocrBusy = false;
+    console.error('OCR error:', err);
     return null;
   }
 }
 
-// ── Smarter question extraction ───────────────────────────────────────────────
-function extractQuestions(text) {
-  // Clean up soft line wraps (OCR artefacts)
-  let cleaned = text
-    .replace(/\r\n/g, '\n')
-    .replace(/([a-z,])\n([a-z])/g, '$1 $2')   // join broken lines mid-sentence
-    .replace(/\n{3,}/g, '\n\n');               // collapse excess blank lines
+// ── KNOWLEDGE BASE ────────────────────────────────────────
+const KB = {
+  capitals: {"france":"Paris","germany":"Berlin","spain":"Madrid","italy":"Rome","japan":"Tokyo","china":"Beijing","india":"New Delhi","australia":"Canberra","brazil":"Brasília","canada":"Ottawa","usa":"Washington D.C.","united states":"Washington D.C.","uk":"London","united kingdom":"London","russia":"Moscow","mexico":"Mexico City","south africa":"Pretoria","egypt":"Cairo","ukraine":"Kyiv","poland":"Warsaw","netherlands":"Amsterdam","sweden":"Stockholm","norway":"Oslo","denmark":"Copenhagen","portugal":"Lisbon","greece":"Athens","ireland":"Dublin","argentina":"Buenos Aires","chile":"Santiago","peru":"Lima","colombia":"Bogotá","nigeria":"Abuja","kenya":"Nairobi","south korea":"Seoul","vietnam":"Hanoi","thailand":"Bangkok","indonesia":"Jakarta","pakistan":"Islamabad","iran":"Tehran","iraq":"Baghdad","saudi arabia":"Riyadh","turkey":"Ankara","israel":"Jerusalem","new zealand":"Wellington","philippines":"Manila","malaysia":"Kuala Lumpur","switzerland":"Bern","austria":"Vienna","belgium":"Brussels","czech republic":"Prague","hungary":"Budapest","romania":"Bucharest","finland":"Helsinki","scotland":"Edinburgh","wales":"Cardiff","bangladesh":"Dhaka","singapore":"Singapore","cambodia":"Phnom Penh","myanmar":"Naypyidaw"},
+  authors: {"romeo and juliet":"William Shakespeare","hamlet":"William Shakespeare","macbeth":"William Shakespeare","othello":"William Shakespeare","the tempest":"William Shakespeare","a midsummer night's dream":"William Shakespeare","pride and prejudice":"Jane Austen","sense and sensibility":"Jane Austen","emma":"Jane Austen","1984":"George Orwell","animal farm":"George Orwell","to kill a mockingbird":"Harper Lee","the great gatsby":"F. Scott Fitzgerald","frankenstein":"Mary Shelley","dracula":"Bram Stoker","great expectations":"Charles Dickens","oliver twist":"Charles Dickens","a tale of two cities":"Charles Dickens","harry potter":"J.K. Rowling","the hobbit":"J.R.R. Tolkien","lord of the rings":"J.R.R. Tolkien","brave new world":"Aldous Huxley","fahrenheit 451":"Ray Bradbury","the catcher in the rye":"J.D. Salinger","of mice and men":"John Steinbeck","lord of the flies":"William Golding","don quixote":"Miguel de Cervantes","war and peace":"Leo Tolstoy","anna karenina":"Leo Tolstoy","crime and punishment":"Fyodor Dostoevsky","moby dick":"Herman Melville","the odyssey":"Homer","the iliad":"Homer","jane eyre":"Charlotte Brontë","wuthering heights":"Emily Brontë","the picture of dorian gray":"Oscar Wilde","the metamorphosis":"Franz Kafka","canterbury tales":"Geoffrey Chaucer","divine comedy":"Dante Alighieri"},
+  science: {"speed of light":"299,792,458 m/s (≈ 3×10⁸ m/s) in a vacuum","speed of sound":"343 m/s in air at 20°C","gravitational acceleration":"9.81 m/s² on Earth's surface","boiling point of water":"100°C / 212°F at standard pressure","freezing point of water":"0°C / 32°F","absolute zero":"−273.15°C / 0 Kelvin","avogadro's number":"6.022 × 10²³ mol⁻¹","how many planets":"8 planets: Mercury, Venus, Earth, Mars, Jupiter, Saturn, Uranus, Neptune","how many continents":"7 continents","how many bones":"206 bones in the adult human body","largest country":"Russia (17.1 million km²)","longest river":"Nile (~6,650 km)","highest mountain":"Mount Everest (8,849 m)","largest ocean":"Pacific Ocean","largest planet":"Jupiter","smallest planet":"Mercury","dna stands for":"Deoxyribonucleic acid","photosynthesis equation":"6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂","photosynthesis":"6CO₂ + 6H₂O + light → C₆H₁₂O₆ + 6O₂","newton's first law":"An object stays at rest or in uniform motion unless acted on by an external force","newton's second law":"F = ma","newton's third law":"For every action there is an equal and opposite reaction","ohm's law":"V = IR","ideal gas law":"PV = nRT"},
+  maths: {"value of pi":"π ≈ 3.14159265358979…","what is pi":"π ≈ 3.14159265358979…","euler's number":"e ≈ 2.71828182845904…","pythagoras theorem":"a² + b² = c²","pythagorean theorem":"a² + b² = c²","quadratic formula":"x = (−b ± √(b²−4ac)) / 2a","area of circle":"A = πr²","circumference of circle":"C = 2πr","area of triangle":"A = ½ × base × height","area of rectangle":"A = length × width","volume of sphere":"V = (4/3)πr³","volume of cylinder":"V = πr²h","sine rule":"a/sin(A) = b/sin(B) = c/sin(C)","cosine rule":"c² = a² + b² − 2ab·cos(C)","sum of angles in triangle":"180°","sum of angles in quadrilateral":"360°","derivative of sin x":"cos(x)","derivative of cos x":"−sin(x)","derivative of tan x":"sec²(x)","derivative of ln x":"1/x","derivative of e^x":"eˣ","integral of sin x":"−cos(x) + C","integral of cos x":"sin(x) + C","integral of e^x":"eˣ + C","what is mean":"Sum of values ÷ count","what is median":"Middle value when sorted","what is mode":"Most frequent value","what is range":"Max − Min","standard deviation":"Square root of the variance"},
+  history: {"world war 1 start":"1914","world war 1 end":"1918","world war 2 start":"1939","world war 2 end":"1945","american civil war":"1861–1865","french revolution":"1789–1799","when was america founded":"1776 (4 July — Declaration of Independence)","berlin wall fall":"1989 (9 November)","first moon landing":"20 July 1969, Apollo 11 (Neil Armstrong & Buzz Aldrin)","magna carta":"Signed 1215 by King John of England","who invented the telephone":"Alexander Graham Bell (1876)","who invented the light bulb":"Thomas Edison (1879)","who invented the printing press":"Johannes Gutenberg (~1440)","who invented the airplane":"Wright Brothers, Orville & Wilbur (1903)","cold war":"1947–1991"},
+  english: {"what is a simile":"A comparison using 'like' or 'as' (e.g. 'brave as a lion')","what is a metaphor":"Describing something as if it were something else without 'like' or 'as'","what is alliteration":"Repetition of the same consonant sound at the start of nearby words","what is onomatopoeia":"A word that imitates the sound it describes (e.g. buzz, hiss, crash)","what is personification":"Giving human qualities to non-human things","what is hyperbole":"Deliberate extreme exaggeration for emphasis","what is irony":"A contrast between what is expected and what actually occurs","what is a sonnet":"A 14-line poem, typically in iambic pentameter","what is a protagonist":"The main character of a story","what is an antagonist":"The character who opposes the protagonist","what is foreshadowing":"Hinting at events that will occur later in the story","what is a soliloquy":"A character speaking inner thoughts aloud, alone on stage","what is an oxymoron":"Two contradictory words together (e.g. 'bittersweet', 'deafening silence')","what is iambic pentameter":"A rhythm of 10 syllables per line, alternating unstressed/stressed","what is a motif":"A recurring element that has symbolic significance","nouns":"Words naming people, places, things or ideas","verbs":"Words expressing actions, states or occurrences","adjectives":"Words describing or modifying nouns","adverbs":"Words modifying verbs, adjectives or other adverbs (often -ly)","conjunctions":"Words connecting clauses (e.g. and, but, because, although)"},
+  geography: {"largest continent":"Asia","smallest continent":"Australia / Oceania","longest mountain range":"Andes (~7,000 km, South America)","largest desert":"Antarctic Desert; Sahara is the largest hot desert","deepest lake":"Lake Baikal, Russia (~1,642 m)","prime meridian":"0° longitude, through Greenwich, London","tropic of cancer":"23.5°N latitude","tropic of capricorn":"23.5°S latitude","what is latitude":"Angular distance north or south of the equator","what is longitude":"Angular distance east or west of the prime meridian","what is erosion":"Wearing away of Earth's surface by wind, water, ice or other agents","what is plate tectonics":"Theory that Earth's lithosphere is divided into moving tectonic plates"}
+};
 
-  const lines = cleaned.split(/\n/).map(l => l.trim()).filter(Boolean);
-  const questions = [];
-
-  const questionStarters = /^(what|who|where|when|why|how|which|calculate|compute|solve|find|define|explain|describe|compare|contrast|evaluate|analyse|analyze|state|list|name|give|identify|outline|discuss|show|prove|is|are|do|does|did|can|could|would|was|were|has|have|had)\b/i;
-
-  // Also detect fill-in-the-blank / math equations
-  const fillBlank = /_{3,}|\[[ ]*\]|\(\s*\?\s*\)/;
-  const mathEquation = /^[\d\s\+\-\*\/\^\(\)\.=]+[=?]$/;
-  const numberedItem = /^(?:[a-z][\.\)]\s*|\d+[\.\)]\s*|[ivxIVX]+[\.\)]\s*|\*\s*|[-•]\s*)/i;
-
-  for (let line of lines) {
-    // Strip list markers
-    const clean = line.replace(numberedItem, '').trim();
-    if (clean.length < 6) continue;
-
-    const hasQMark = clean.endsWith('?');
-    const startsWithQWord = questionStarters.test(clean);
-    const hasFillBlank = fillBlank.test(clean);
-    const isMath = mathEquation.test(clean.replace(/\s/g, ''));
-
-    // Also accept imperative academic questions ("Describe the water cycle.")
-    const isInstruction = /^(describe|explain|evaluate|analyse|analyze|compare|contrast|outline|discuss|state|list|name|identify|prove|derive|sketch|draw|label)\b/i.test(clean) && clean.length > 10;
-
-    if (hasQMark || startsWithQWord || hasFillBlank || isMath || isInstruction) {
-      // Capitalise first letter
-      const q = clean.charAt(0).toUpperCase() + clean.slice(1);
-      // Avoid duplicate meaning (normalise to lowercase for dedup)
-      if (!questions.some(existing => existing.toLowerCase() === q.toLowerCase())) {
-        questions.push(q);
-      }
-    }
+function kbLookup(q) {
+  const lq = q.toLowerCase().replace(/[?!.]+$/, '').trim();
+  const ar = tryArith(lq); if (ar !== null) return { ans: String(ar), src: 'kb' };
+  const cm = lq.match(/capital(?:\s+city)?\s+of\s+(?:the\s+)?([a-z\s]+)/);
+  if (cm && KB.capitals[cm[1].trim()]) return { ans: KB.capitals[cm[1].trim()], src: 'kb' };
+  const cm2 = lq.match(/([a-z\s]+?)'?s?\s+capital/);
+  if (cm2 && KB.capitals[cm2[1].trim()]) return { ans: KB.capitals[cm2[1].trim()], src: 'kb' };
+  const wm = lq.match(/who\s+(?:wrote|authored|penned|created)\s+(?:the\s+)?['"]?(.+?)['"]?\s*[?.]*$/);
+  if (wm) { const t = wm[1].trim(); if (KB.authors[t]) return { ans: KB.authors[t], src: 'kb' }; for (const k in KB.authors) if (t.includes(k) || k.includes(t)) return { ans: KB.authors[k], src: 'kb' }; }
+  for (const sec of [KB.maths, KB.science, KB.history, KB.english, KB.geography]) {
+    if (sec[lq]) return { ans: sec[lq], src: 'kb' };
+    for (const key in sec) if (lq.includes(key) && key.length > 4) return { ans: sec[key], src: 'kb' };
   }
-  return questions;
+  return null;
 }
 
-// ── Process text ──────────────────────────────────────────────────────────────
-async function processText(raw) {
-  const questions = extractQuestions(raw);
-  if (!questions.length) {
-    document.getElementById('no-results').classList.add('visible');
-    document.getElementById('results-section').classList.remove('visible');
-    return;
-  }
+function tryArith(lq) {
+  let m;
+  m = lq.match(/(\d+(?:\.\d+)?)\s*%\s*of\s*(\d+(?:\.\d+)?)/); if (m) return fmtN(parseFloat(m[1])/100*parseFloat(m[2]));
+  m = lq.match(/(?:square root|sqrt|√)\s*(?:of\s*)?(\d+(?:\.\d+)?)/); if (m) return fmtN(Math.sqrt(parseFloat(m[1])));
+  m = lq.match(/(\d+(?:\.\d+)?)\s*(?:to the power of|\^)\s*(\d+(?:\.\d+)?)/); if (m) return fmtN(Math.pow(parseFloat(m[1]),parseFloat(m[2])));
+  m = lq.match(/(\d+(?:\.\d+)?)\s*(?:squared|\^2)/); if (m) return fmtN(Math.pow(parseFloat(m[1]),2));
+  m = lq.match(/(\d+(?:\.\d+)?)\s*(?:cubed|\^3)/); if (m) return fmtN(Math.pow(parseFloat(m[1]),3));
+  m = lq.match(/(\d+(?:\.\d+)?)\s*(?:times|multiplied by|×)\s*(\d+(?:\.\d+)?)/); if (m) return fmtN(parseFloat(m[1])*parseFloat(m[2]));
+  m = lq.match(/(\d+(?:\.\d+)?)\s*(?:divided by|÷|over)\s*(\d+(?:\.\d+)?)/); if (m) return fmtN(parseFloat(m[1])/parseFloat(m[2]));
+  m = lq.match(/(\d+(?:\.\d+)?)\s*(?:plus|added to)\s*(\d+(?:\.\d+)?)/); if (m) return fmtN(parseFloat(m[1])+parseFloat(m[2]));
+  m = lq.match(/(\d+(?:\.\d+)?)\s*(?:minus|subtract)\s*(\d+(?:\.\d+)?)/); if (m) return fmtN(parseFloat(m[1])-parseFloat(m[2]));
+  const bm = lq.match(/^(?:what is |calculate |evaluate |compute |work out )?([0-9\s+\-*\/^().]+)[?. ]*$/i);
+  if (bm) { try { const r = Function('"use strict";return('+bm[1].trim().replace(/\^/g,'**')+')')(); if (typeof r==='number'&&isFinite(r)) return fmtN(r); } catch(_){} }
+  return null;
+}
+function fmtN(n){return !isFinite(n)?null:parseFloat(n.toPrecision(10)).toString();}
 
-  const list = document.getElementById('answers-list');
-  const section = document.getElementById('results-section');
-  document.getElementById('no-results').classList.remove('visible');
-  section.classList.add('visible');
-  document.getElementById('answer-count').textContent = questions.length;
+// ── ALGEBRA ENGINE ────────────────────────────────────────
+function norm(s){return s.toString().replace(/×/g,'*').replace(/÷/g,'/').replace(/[−–]/g,'-').replace(/(\d)\s*([a-df-wyz])/gi,'$1*$2').replace(/\)\s*\(/g,')*(').replace(/([a-df-wyz])\s*\(/gi,'$1*(').replace(/\^/g,'**').trim();}
+function getVars(s){const m=s.match(/\b[a-df-wyz]\b/gi);if(!m)return[];const seen={},out=[];for(const v of m){const lv=v.toLowerCase();if(!seen[lv]){seen[lv]=1;out.push(lv);}}return out;}
+function safeEval(expr,vname,val){try{return Function('"use strict";return('+expr.replace(/\b([a-df-wyz])\b/gi,(_,v)=>v.toLowerCase()===vname?'('+val+')':v)+')')();}catch(_){return NaN;}}
+function safeEval2(expr,scope){try{return Function('"use strict";return('+expr.replace(/\b([a-df-wyz])\b/gi,(_,v)=>{const k=v.toLowerCase();return scope[k]!==undefined?'('+scope[k]+')':v;})+')')();}catch(_){return NaN;}}
+
+function findRoot(fn){
+  const pts=[-1e4,-1e3,-100,-50,-20,-10,-5,-2,-1,-0.5,0,0.5,1,2,5,10,20,50,100,1e3,1e4];
+  let lo=null,hi=null,prev={x:pts[0],y:fn(pts[0])};
+  for(let i=1;i<pts.length;i++){const cur={x:pts[i],y:fn(pts[i])};if(isFinite(prev.y)&&isFinite(cur.y)&&Math.sign(prev.y)!==Math.sign(cur.y)){lo=prev.x;hi=cur.x;break;}prev=cur;}
+  if(lo===null){for(let v=-500;v<500;v+=0.25){const a=fn(v),b=fn(v+0.25);if(isFinite(a)&&isFinite(b)&&Math.sign(a)!==Math.sign(b)){lo=v;hi=v+0.25;break;}}}
+  if(lo===null)return null;
+  for(let j=0;j<120;j++){const mid=(lo+hi)/2,fm=fn(mid);if(Math.abs(fm)<1e-11)return mid;if(Math.sign(fm)===Math.sign(fn(lo)))lo=mid;else hi=mid;}
+  const ans=(lo+hi)/2;return Math.abs(fn(ans))<0.001?ans:null;
+}
+
+function algebraSolve(q){
+  const lq=q.trim();
+  const sm=lq.match(/(.+=.+?)\s+and\s+(.+=.+)/i);if(sm){const sr=solveSimult(sm[1],sm[2]);if(sr)return sr;}
+  const solM=lq.match(/(?:solve|find|work out)\s+(.+?)(?:\s+for\s+([a-z]))?[?. ]*$/i);if(solM&&solM[1].includes('=')){const sr2=solveEq(solM[1],solM[2]||null);if(sr2)return sr2;}
+  const beM=lq.match(/^([a-z0-9\s+\-*\/^().=]+)[?. ]*$/i);if(beM&&/[a-df-wyz]/i.test(beM[1])&&beM[1].includes('=')){const sr3=solveEq(beM[1],null);if(sr3)return sr3;}
+  const exM=lq.match(/(?:expand|multiply out)\s+(.+)/i);if(exM){const er=expandBinomials(exM[1]);if(er)return er;}
+  const siM=lq.match(/simplify\s+(.+)/i);if(siM){const sir=doSimplify(siM[1]);if(sir)return sir;}
+  const dM=lq.match(/(?:differentiate|find the derivative of|d\/dx(?:\s+of)?)\s+(.+?)(?:\s+with respect to\s+([a-z]))?[?. ]*$/i);if(dM){const dr=doDiff(dM[1],dM[2]||'x');if(dr)return dr;}
+  const iM=lq.match(/(?:integrate|find the integral of)\s+(.+?)(?:\s+(?:with respect to\s+)?d?([a-z]))?[?. ]*$/i);if(iM){const ir=doInteg(iM[1],iM[2]||'x');if(ir)return ir;}
+  const qM=lq.match(/quadratic formula(?:\s+(?:to\s+)?solve)?\s+(.+)/i);if(qM){const qr=quadForm(qM[1]);if(qr)return qr;}
+  const sdM=lq.match(/(\d+(?:\.\d+)?)\s*(?:km\/h|mph|m\/s|kmh|miles per hour|km per hour)[^\d]*(\d+(?:\.\d+)?)\s*(hours?|hrs?|minutes?|mins?|seconds?|secs?)/i);
+  if(sdM){let spd=parseFloat(sdM[1]),tt=parseFloat(sdM[2]);const unit=sdM[3].toLowerCase();if(/min/.test(unit))tt/=60;if(/sec/.test(unit))tt/=3600;const dist=spd*tt,du=/mph|miles/.test(lq)?'miles':'km';return{ans:`Distance = speed × time\n= ${spd} × ${fmtN(tt)} h\n= ${fmtN(dist)} ${du}`,src:'math'};}
+  return null;
+}
+
+function solveEq(raw,varHint){try{const eq=norm(raw),parts=eq.split('=');if(parts.length!==2)return null;const lhs=parts[0].trim(),rhs=parts[1].trim(),vars=varHint?[varHint.toLowerCase()]:getVars(eq);if(!vars.length)return null;const v=vars[0],fn=x=>safeEval('('+lhs+')-('+rhs+')',v,x),root=findRoot(fn);if(root===null)return null;const rounded=parseFloat(root.toFixed(8)),display=Number.isInteger(rounded)?String(rounded):fmtN(rounded);return{ans:`${v} = ${display}`,steps:`${lhs} = ${rhs}\n→ Solve for ${v}: ${v} = ${display}`,src:'math'};}catch(_){return null;}}
+
+function solveSimult(eq1r,eq2r){try{const eq1=norm(eq1r),eq2=norm(eq2r),all=getVars(eq1+' '+eq2).slice(0,2);if(all.length<2)return null;const[v1,v2]=all,p1=eq1.split('='),p2=eq2.split('=');if(p1.length!==2||p2.length!==2)return null;const f1='('+p1[0]+')-('+p1[1]+')',f2='('+p2[0]+')-('+p2[1]+')';let best=Infinity,bv1=null,bv2=null;for(let a=-30;a<=30;a+=0.5)for(let b=-30;b<=30;b+=0.5){const scope={};scope[v1]=a;scope[v2]=b;const d=Math.abs(safeEval2(f1,scope))+Math.abs(safeEval2(f2,scope));if(d<best){best=d;bv1=a;bv2=b;}}if(best>0.5)return null;return{ans:`${v1} = ${fmtN(bv1)},  ${v2} = ${fmtN(bv2)}`,steps:`${eq1r}\n${eq2r}\n→ ${v1} = ${fmtN(bv1)}, ${v2} = ${fmtN(bv2)}`,src:'math'};}catch(_){return null;}}
+
+function expandBinomials(raw){try{const e=norm(raw.replace(/[?.]+$/,'')),m=e.match(/^\(([^)]+)\)\*\(([^)]+)\)$/);if(!m)return null;const parse=s=>{const mm=s.match(/^([+-]?\d*\.?\d*)\*?([a-z])([+-]\d+\.?\d*)$/i);if(!mm)return null;return{a:parseFloat(mm[1]||'1'),v:mm[2],c:parseFloat(mm[3])};};const p=parse(m[1]),q=parse(m[2]);if(!p||!q||p.v!==q.v)return null;const A=p.a*q.a,B=p.a*q.c+p.c*q.a,C=p.c*q.c;let res='';if(A!==0)res+=(A===1?'':A===-1?'-':A)+p.v+'²';if(B!==0)res+=(B>0&&res?'+':'')+(B===1?'':B===-1?'-':B)+p.v;if(C!==0)res+=(C>0&&res?'+':'')+C;return{ans:'= '+(res||'0'),src:'math'};}catch(_){return null;}}
+
+function splitT(e){let terms=[],cur='',depth=0;for(let i=0;i<e.length;i++){const c=e[i];if(c==='('||c==='[')depth++;if(c===')'||c===']')depth--;if((c==='+'||c==='-')&&depth===0&&i>0){terms.push(cur);cur=c;}else cur+=c;}if(cur)terms.push(cur);return terms;}
+
+function doSimplify(raw){try{const e=norm(raw.replace(/[?.]+$/,'')).replace(/\s/g,''),terms=splitT(e),coefs={};for(const t of terms){const m=t.match(/^([+-]?\d*\.?\d*)\*?([a-df-wyz])(?:\*\*(\d+))?$/i);if(m){const coef=parseFloat(m[1]||'1'),pow=parseInt(m[3]||'1'),vv=m[2],key=vv+'^'+pow;coefs[key]=(coefs[key]||0)+coef;}else{const cc=parseFloat(t);if(!isNaN(cc))coefs['const']=(coefs['const']||0)+cc;}}const keys=Object.keys(coefs).sort((a,b)=>{const pa=a.includes('^')?parseInt(a.split('^')[1]):0,pb=b.includes('^')?parseInt(b.split('^')[1]):0;return pb-pa;});let out='';for(const k of keys){const val=coefs[k];if(Math.abs(val)<1e-12)continue;const sign=val>0&&out?'+':'';if(k==='const'){out+=sign+val;}else{const[vr,pw]=k.split('^'),cs=Math.abs(val)===1?(val<0?'-':''):val;out+=sign+cs+vr+(pw==='1'?'':'^'+pw);}}return out?{ans:'= '+out,src:'math'}:null;}catch(_){return null;}}
+
+function diffTerm(t,v){const m=t.match(new RegExp('^([+-]?\\d*\\.?\\d*)\\*?'+v+'(?:\\*\\*(\\d+))?$','i'));if(m){const coef=parseFloat(m[1]||'1'),n=parseInt(m[2]||'1');if(n===0)return '0';if(n===1)return String(coef===1?1:coef);return(coef*n)+''+v+(n-1===1?'':'^'+(n-1));}if(!/[a-df-wyz]/i.test(t))return '0';return null;}
+
+function doDiff(raw,wrt){try{const e=norm(raw.replace(/[?.]+$/,'')).replace(/\s/g,''),v=wrt.toLowerCase();if(!/[a-df-wyz]/i.test(e))return{ans:`d/d${v}(${e}) = 0`,src:'math'};const pm=e.match(new RegExp('^([+-]?\\d*\\.?\\d*)\\*?'+v+'(?:\\*\\*(\\d+))?$','i'));if(pm){const coef=parseFloat(pm[1]||'1'),n=parseInt(pm[2]||'1');if(n===0)return{ans:'0',src:'math'};if(n===1)return{ans:`d/d${v}(${e}) = ${coef}`,src:'math'};return{ans:`d/d${v}(${e}) = ${coef*n}${v}${n-1===1?'':'^'+(n-1)}`,src:'math'};}if(e==='sin('+v+')')return{ans:`d/d${v}(sin ${v}) = cos ${v}`,src:'math'};if(e==='cos('+v+')')return{ans:`d/d${v}(cos ${v}) = −sin ${v}`,src:'math'};if(e==='tan('+v+')')return{ans:`d/d${v}(tan ${v}) = sec² ${v}`,src:'math'};if(e==='ln('+v+')')return{ans:`d/d${v}(ln ${v}) = 1/${v}`,src:'math'};if(e==='e**'+v||e==='exp('+v+')')return{ans:`d/d${v}(eˣ) = eˣ`,src:'math'};const parts=splitT(e);if(parts.length>1){let diffs=[];for(const p of parts){const d=diffTerm(p,v);if(d===null){diffs=null;break;}diffs.push(d);}if(diffs){const joined=diffs.join(' + ').replace(/\+ -/g,'- ').replace(/\+ 0/g,'').replace(/^0 \+ /,'');return{ans:`d/d${v}(${raw.trim()}) = ${joined}`,src:'math'};}}return null;}catch(_){return null;}}
+
+function intTerm(t,v){if(!/[a-df-wyz]/i.test(t)){const c=parseFloat(t);if(!isNaN(c))return c+v;return null;}const m=t.match(new RegExp('^([+-]?\\d*\\.?\\d*)\\*?'+v+'(?:\\*\\*(([+-]?\\d+)))?$','i'));if(m){const coef=parseFloat(m[1]||'1'),n=parseFloat(m[2]||'1');if(n===-1)return(coef===1?'':coef)+'ln|'+v+'|';const nn=n+1,nc=coef/nn;return fmtN(nc)+v+'^'+nn;}return null;}
+
+function doInteg(raw,wrt){try{const e=norm(raw.replace(/[?.]+$/,'')).replace(/\s/g,''),v=wrt.toLowerCase();if(!/[a-df-wyz]/i.test(e)){const c=parseFloat(e);if(!isNaN(c))return{ans:`∫${e} d${v} = ${e}${v} + C`,src:'math'};}const pm=e.match(new RegExp('^([+-]?\\d*\\.?\\d*)\\*?'+v+'(?:\\*\\*(([+-]?\\d+)))?$','i'));if(pm){const coef=parseFloat(pm[1]||'1'),n=parseFloat(pm[2]||'1');if(n===-1)return{ans:`∫${e} d${v} = ${coef===1?'':coef}ln|${v}| + C`,src:'math'};const nn=n+1,nc=coef/nn;return{ans:`∫${e} d${v} = ${fmtN(nc)}${v}^${nn} + C`,src:'math'};}if(e==='sin('+v+')')return{ans:`∫sin(${v}) d${v} = −cos(${v}) + C`,src:'math'};if(e==='cos('+v+')')return{ans:`∫cos(${v}) d${v} = sin(${v}) + C`,src:'math'};if(e==='e**'+v||e==='exp('+v+')')return{ans:`∫eˣ d${v} = eˣ + C`,src:'math'};const parts=splitT(e);if(parts.length>1){let ints=[];for(const p of parts){const it=intTerm(p,v);if(it===null){ints=null;break;}ints.push(it);}if(ints)return{ans:`∫(${raw.trim()}) d${v} = ${ints.join(' + ').replace(/\+ -/g,'- ')} + C`,src:'math'};}return null;}catch(_){return null;}}
+
+function quadForm(raw){try{const eq=norm(raw).replace(/\s/g,''),m=eq.match(/([+-]?\d*\.?\d*)\*?x\*\*2([+-]\d*\.?\d*)\*?x([+-]\d+\.?\d*)=0/i);if(!m)return null;let a=parseFloat(m[1]||'1'),b=parseFloat(m[2]+(m[2]==='-'?'1':'')||'0'),c=parseFloat(m[3]);if(isNaN(b))b=m[2]==='-'?-1:1;const disc=b*b-4*a*c;if(disc<0)return{ans:`No real solutions (discriminant = ${fmtN(disc)} < 0)`,src:'math'};const x1=(-b+Math.sqrt(disc))/(2*a),x2=(-b-Math.sqrt(disc))/(2*a);const steps=`a=${a}, b=${b}, c=${c}\nDisc = b²−4ac = ${fmtN(disc)}\nx = (−b ± √disc) / 2a\nx₁ = ${fmtN(x1)}\nx₂ = ${fmtN(x2)}`;if(Math.abs(x1-x2)<1e-9)return{ans:`x = ${fmtN(x1)} (repeated root)`,steps,src:'math'};return{ans:`x = ${fmtN(x1)}  or  x = ${fmtN(x2)}`,steps,src:'math'};}catch(_){return null;}}
+
+// ── QUESTION EXTRACTION ───────────────────────────────────
+function extractQuestions(text){
+  const t=text.replace(/\r\n/g,'\n').replace(/([a-z,])\n([a-z])/g,'$1 $2').replace(/\n{3,}/g,'\n\n');
+  const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
+  const qS=/^(what|who|where|when|why|how|which|calculate|compute|solve|find|define|explain|describe|compare|evaluate|analyse|analyze|state|list|name|identify|prove|derive|differentiate|integrate|expand|simplify|factorise|factorize|is|are|do|does|did|can|could|was|were)\b/i;
+  const numbered=/^(?:[a-z][\.\)]\s*|\d+[\.\)]\s*|[ivxIVX]+[\.\)]\s*|[-•*]\s*)/i;
+  const qs=[];
+  for(const line of lines){
+    const clean=line.replace(numbered,'').trim();
+    if(clean.length<5)continue;
+    const hasQ=clean.endsWith('?'),startsQ=qS.test(clean),hasFill=/_{3,}|\[[ ]*\]/.test(clean),isMathEq=/^[\d\s+\-*/^().=]+$/.test(clean)&&clean.includes('=')&&clean.length>4,isInstr=/^(describe|explain|evaluate|analyse|analyze|compare|outline|discuss|prove|derive|differentiate|integrate|expand|simplify|factorise)\b/i.test(clean)&&clean.length>8;
+    if(hasQ||startsQ||hasFill||isMathEq||isInstr){const q=clean.charAt(0).toUpperCase()+clean.slice(1);if(!qs.some(e=>e.toLowerCase()===q.toLowerCase()))qs.push(q);}
+  }
+  return qs;
+}
+
+// ── PROCESS & RENDER ──────────────────────────────────────
+function processQuestions(questions, fromOcr) {
+  if (!questions.length) { document.getElementById('no-res').classList.add('on'); return; }
+  const list = document.getElementById('ans-list'), sec = document.getElementById('results');
+  document.getElementById('no-res').classList.remove('on');
+  sec.classList.add('on');
+  document.getElementById('ans-count').textContent = questions.length;
   list.innerHTML = '';
-
-  const cardEls = [];
-  questions.forEach((q, i) => {
+  for (let i = 0; i < questions.length; i++) {
     const card = document.createElement('div');
-    card.className = 'answer-card';
-    card.style.animationDelay = (i * 50) + 'ms';
-    card.innerHTML = `
-      <div class="answer-q"><span class="q-num">Q${i+1}</span><span>${escHtml(q)}</span></div>
-      <div class="answer-a" id="ans-${i}">
-        <span class="ans-label">ANS</span>
-        <span class="ans-text thinking">Thinking…</span>
-      </div>`;
+    card.className = 'card';
+    card.style.animationDelay = (i * 40) + 'ms';
+    card.innerHTML = `<div class="card-q"><span class="qn">Q${i+1}</span><span>${esc(questions[i])}</span></div><div class="card-a" id="a${i}"><span class="tag err">—</span><span class="ans thinking">Working…</span></div>`;
     list.appendChild(card);
-    cardEls.push({ el: card, q, i });
-  });
-
-  let solved = 0;
-  for (const { q, i } of cardEls) {
-    const ansEl = document.getElementById(`ans-${i}`);
-    const kbAns = kbSolve(q);
-    if (kbAns) {
-      ansEl.innerHTML = `<span class="ans-label">ANS</span><span class="ans-text">${escHtml(kbAns)}</span><span class="badge-source kb">KB</span>`;
-      solved++;
-    } else {
-      const aiAns = await aiAnswer(q);
-      if (aiAns) {
-        ansEl.innerHTML = `<span class="ans-label ai">ANS</span><span class="ans-text">${escHtml(aiAns)}</span><span class="badge-source ai">AI</span>`;
-        solved++;
-      } else {
-        ansEl.innerHTML = `<span class="ans-label">ANS</span><span class="ans-text" style="color:var(--text-muted);font-weight:400;font-size:13px;">Not found — try rephrasing or check your textbook.</span>`;
-      }
-    }
   }
-
+  let solved = 0, solvedQs = [];
+  for (let i = 0; i < questions.length; i++) {
+    const result = solveOne(questions[i]);
+    if (fromOcr && result.src !== 'err') result.fromOcr = true;
+    renderAns(document.getElementById('a' + i), result);
+    if (result.src !== 'err') { solved++; solvedQs.push(`Q${i+1}: ${questions[i].slice(0,50)}${questions[i].length>50?'…':''}`); }
+  }
   totalSolved += solved;
   document.getElementById('solved-count').textContent = totalSolved;
+  if (solved > 0) toast(solved + ' answer' + (solved > 1 ? 's' : '') + ' found!', solvedQs.slice(0, 2).join('<br>'), 'good');
+  else toast('No answers found', 'Try rephrasing or check spelling.', '');
 }
 
-// ── OCR ───────────────────────────────────────────────────────────────────────
-let ocrWorker = null;
+function solveOne(q) {
+  const kb = kbLookup(q); if (kb) return kb;
+  const alg = algebraSolve(q); if (alg) return alg;
+  return { ans: 'Not found — rephrase or check your textbook.', src: 'err' };
+}
 
-async function getOcrWorker() {
-  if (!ocrWorker) {
-    ocrWorker = await Tesseract.createWorker('eng', 1, {
-      logger: m => {
-        if (m.status === 'recognizing text') {
-          const pct = Math.round(5 + m.progress * 85);
-          showStatus('Reading text from image…', pct);
-        } else if (m.status === 'loading tesseract core') {
-          showStatus('Starting image scanner...', 10);
-        }
-      }
+function renderAns(el, result) {
+  const { ans, steps, src, fromOcr } = result;
+  const tc = src==='kb'?'kb':src==='math'?'math':'err';
+  const tl = src==='kb'?'KB':src==='math'?'MATH':'—';
+  const monoC = src==='math'?' mono':'', dimC = src==='err'?' dim':'';
+  let stepsHTML = '';
+  if (steps) { const sid = 's' + Math.random().toString(36).slice(2); stepsHTML = `<div style="width:100%;padding-top:3px;"><button class="steps-btn" onclick="toggleSteps('${sid}')">▶ Show working</button><div class="steps-box" id="${sid}">${esc(steps)}</div></div>`; }
+  const ocrBadge = fromOcr ? `<span class="ocr-badge">📷 via screen OCR</span>` : '';
+  el.innerHTML = `<span class="tag ${tc}">${tl}</span><div style="flex:1;"><span class="ans${monoC}${dimC}">${esc(ans)}</span>${ocrBadge}${stepsHTML}</div>`;
+}
+
+function toggleSteps(id) { const box = document.getElementById(id); box.classList.toggle('on'); box.previousElementSibling.textContent = (box.classList.contains('on') ? '▼' : '▶') + ' Show working'; }
+
+// ── FILE UPLOAD ───────────────────────────────────────────
+async function handleFile(file) {
+  if (!file || !file.type.startsWith('image/')) return;
+  const reader = new FileReader();
+  reader.onload = e => { document.getElementById('prev-img').src = e.target.result; document.getElementById('prev-wrap').classList.add('on'); };
+  reader.readAsDataURL(file);
+  const text = await runOCR(file);
+  if (!text || text.length < 5) { toast('No text found', 'Try a clearer image with visible text.', 'warn'); return; }
+  document.getElementById('ocr-text').value = text;
+  document.getElementById('ocr-box').classList.add('on');
+  const qs = extractQuestions(text);
+  if (!qs.length) toast('OCR done', 'Text extracted but no questions detected. Edit above and press Re-solve.', 'info', 6000);
+  else processQuestions(qs, true);
+}
+
+// ── SCREEN WATCH ──────────────────────────────────────────
+function toggleWatch() {
+  if (watchInterval) { stopWatch(); return; }
+  if (!navigator.mediaDevices || !navigator.mediaDevices.getDisplayMedia) { toast('Not supported', 'Screen capture not available here.', 'warn'); return; }
+  navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 1 }, audio: false }).then(stream => {
+    watchStream = stream;
+    watchVideo = document.createElement('video');
+    watchVideo.srcObject = stream;
+    watchVideo.muted = true;
+    watchVideo.play().then(() => {
+      document.getElementById('watch-btn').innerHTML = '⏹ Stop Watching';
+      document.getElementById('watch-btn').className = 'btn btn-red';
+      document.getElementById('watch-live').classList.add('on');
+      toast('Screen watch started', 'Capturing & OCR-ing every 4 s. Questions auto-solve!', 'info', 5000);
+      captureAndOCR();
+      cdSec = 4;
+      cdInt = setInterval(() => { cdSec--; document.getElementById('cd').textContent = cdSec + 's'; document.getElementById('wt').textContent = 'Watching — next OCR scan in ' + cdSec + 's'; if (cdSec <= 0) cdSec = 4; }, 1000);
+      watchInterval = setInterval(captureAndOCR, 4000);
+      stream.getVideoTracks()[0].addEventListener('ended', stopWatch);
     });
-  }
-  return ocrWorker;
+  }).catch(() => toast('Cancelled', 'Allow screen sharing when prompted.', ''));
 }
 
-async function runOCR(source, showPreview = true) {
-  showStatus('Initialising OCR…', 5);
-  try {
-    const worker = await getOcrWorker();
-    showStatus('Recognising text…', 40);
-    const result = await worker.recognize(source);
-    const text = result.data.text.trim();
-    hideStatus();
-    if (!text || text.length < 5) return;
-    if (text === lastOcrText) return;
+async function captureAndOCR() {
+  if (!watchVideo || watchVideo.readyState < 2) return;
+  const canvas = document.getElementById('cap');
+  canvas.width = watchVideo.videoWidth; canvas.height = watchVideo.videoHeight;
+  canvas.getContext('2d').drawImage(watchVideo, 0, 0);
+  document.getElementById('prev-img').src = canvas.toDataURL('image/jpeg', 0.8);
+  document.getElementById('prev-wrap').classList.add('on');
+  canvas.toBlob(async blob => {
+    if (!blob) return;
+    const text = await runOCR(blob);
+    if (!text || text.length < 5 || text === lastOcrText) return;
     lastOcrText = text;
     document.getElementById('ocr-text').value = text;
-    document.getElementById('ocr-raw').classList.add('visible');
-    await processText(text);
-  } catch(err) {
-    hideStatus();
-    console.error("OCR Error:", err);
-  }
-}
-
-// ── Screen capture ────────────────────────────────────────────────────────────
-async function startWatch() {
-  try {
-    watchStream = await navigator.mediaDevices.getDisplayMedia({ video: { frameRate: 1 }, audio: false });
-  } catch(e) {
-    alert('Screen share cancelled or not supported.');
-    return false;
-  }
-  watchVideo = document.createElement('video');
-  watchVideo.srcObject = watchStream;
-  watchVideo.muted = true;
-  await watchVideo.play();
-  initModelLoad();
-  document.getElementById('watch-btn').textContent = '⏹ Stop Watching';
-  document.getElementById('watch-btn').classList.add('active');
-  document.getElementById('watch-status').classList.add('visible');
-  captureFrame();
-  nextCapture = 3;
-  countdownInterval = setInterval(() => {
-    nextCapture--;
-    document.getElementById('countdown').textContent = nextCapture + 's';
-    document.getElementById('watch-status-text').textContent = `Watching — next capture in ${nextCapture}s`;
-    if (nextCapture <= 0) nextCapture = 3;
-  }, 1000);
-  watchInterval = setInterval(captureFrame, 3000);
-  watchStream.getVideoTracks()[0].addEventListener('ended', stopWatch);
-  return true;
-}
-
-function captureFrame() {
-  if (!watchVideo || watchVideo.readyState < 2) return;
-  const canvas = document.getElementById('capture-canvas');
-  canvas.width = watchVideo.videoWidth;
-  canvas.height = watchVideo.videoHeight;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(watchVideo, 0, 0);
-  const previewImg = document.getElementById('preview-img');
-  previewImg.src = canvas.toDataURL('image/jpeg', 0.8);
-  document.getElementById('preview-wrap').classList.add('visible');
-  canvas.toBlob(blob => { if (blob) runOCR(blob, false); }, 'image/jpeg', 0.85);
+    document.getElementById('ocr-box').classList.add('on');
+    const qs = extractQuestions(text);
+    if (qs.length) processQuestions(qs, true);
+  }, 'image/jpeg', 0.85);
 }
 
 function stopWatch() {
-  if (watchInterval) clearInterval(watchInterval);
-  if (countdownInterval) clearInterval(countdownInterval);
-  watchInterval = null; countdownInterval = null;
+  clearInterval(watchInterval); clearInterval(cdInt); watchInterval = null; cdInt = null;
   if (watchStream) { watchStream.getTracks().forEach(t => t.stop()); watchStream = null; }
   watchVideo = null;
-  document.getElementById('watch-btn').innerHTML = `<svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg> Watch Screen`;
-  document.getElementById('watch-btn').classList.remove('active');
-  document.getElementById('watch-status').classList.remove('visible');
-  document.getElementById('countdown').textContent = '';
-  document.getElementById('watch-status-text').textContent = 'Watching — next capture in 3s';
+  document.getElementById('watch-btn').innerHTML = '<svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7z"/></svg> Watch Screen';
+  document.getElementById('watch-btn').className = 'btn btn-blue';
+  document.getElementById('watch-live').classList.remove('on');
+  document.getElementById('cd').textContent = '';
+  toast('Screen watch stopped', '', '');
 }
 
-window.toggleWatch = async function() {
-  if (watchInterval) { stopWatch(); } else { await startWatch(); }
-};
-
-// ── File upload ───────────────────────────────────────────────────────────────
-async function handleFile(file) {
-  if (!file || !file.type.startsWith('image/')) return;
-  initModelLoad();
-  const reader = new FileReader();
-  reader.onload = e => {
-    document.getElementById('preview-img').src = e.target.result;
-    document.getElementById('preview-wrap').classList.add('visible');
-  };
-  reader.readAsDataURL(file);
-  await runOCR(file, true);
-}
-
-document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
-
-const zone = document.getElementById('upload-zone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
-zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
-zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag-over'); handleFile(e.dataTransfer.files[0]); });
-
-document.addEventListener('paste', e => {
-  const items = e.clipboardData?.items;
-  if (!items) return;
-  for (const item of items) {
-    if (item.type.startsWith('image/')) { handleFile(item.getAsFile()); break; }
-  }
-});
-
-// ── Text solve ────────────────────────────────────────────────────────────────
-window.solveText = async function() {
+// ── TEXT / OCR SOLVE ──────────────────────────────────────
+function solveText() {
   const raw = document.getElementById('text-input').value.trim();
-  if (!raw) return;
-  initModelLoad();
-  await processText(raw);
-};
-
-window.resolveFromOCR = async function() {
-  const text = document.getElementById('ocr-text').value.trim();
-  if (text) await processText(text);
-};
-
-// ── UI helpers ────────────────────────────────────────────────────────────────
-function showStatus(text, pct) {
-  document.getElementById('status-bar').classList.add('visible');
-  document.getElementById('status-text').textContent = text;
-  document.getElementById('status-pct').textContent = pct + '%';
-  document.getElementById('progress-fill').style.width = pct + '%';
+  if (!raw) { toast('Nothing to solve', 'Type or paste questions above.', ''); return; }
+  let qs = extractQuestions(raw); if (!qs.length) qs = [raw.charAt(0).toUpperCase() + raw.slice(1)];
+  processQuestions(qs, false);
+}
+function resolveOCR() {
+  const t = document.getElementById('ocr-text').value.trim(); if (!t) return;
+  let qs = extractQuestions(t); if (!qs.length) qs = [t.charAt(0).toUpperCase() + t.slice(1)];
+  processQuestions(qs, true);
 }
 
-function hideStatus() { document.getElementById('status-bar').classList.remove('visible'); }
+// ── UI HELPERS ────────────────────────────────────────────
+function showSbar(text, pct) { document.getElementById('sbar').classList.add('on'); document.getElementById('sbar-txt').textContent = text; document.getElementById('sbar-pct').textContent = pct + '%'; document.getElementById('sbar-fill').style.width = pct + '%'; }
+function hideSbar() { document.getElementById('sbar').classList.remove('on'); }
+function clearAll() { document.getElementById('results').classList.remove('on'); document.getElementById('no-res').classList.remove('on'); document.getElementById('ocr-box').classList.remove('on'); document.getElementById('prev-wrap').classList.remove('on'); document.getElementById('prev-img').src = ''; document.getElementById('text-input').value = ''; document.getElementById('ocr-text').value = ''; document.getElementById('ans-list').innerHTML = ''; lastOcrText = ''; hideSbar(); }
+function esc(s) { return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
 
-window.clearAll = function() {
-  document.getElementById('results-section').classList.remove('visible');
-  document.getElementById('no-results').classList.remove('visible');
-  document.getElementById('ocr-raw').classList.remove('visible');
-  document.getElementById('preview-wrap').classList.remove('visible');
-  document.getElementById('preview-img').src = '';
-  document.getElementById('text-input').value = '';
-  document.getElementById('ocr-text').value = '';
-  document.getElementById('answers-list').innerHTML = '';
-  lastOcrText = '';
-  hideStatus();
-};
-
-function escHtml(s) {
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-}
-
-document.getElementById('text-input').addEventListener('keydown', e => {
-  if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) window.solveText();
-});
-</script></body></html>
+// ── WIRING ────────────────────────────────────────────────
+document.getElementById('file-input').addEventListener('change', e => handleFile(e.target.files[0]));
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag'));
+zone.addEventListener('drop', e => { e.preventDefault(); zone.classList.remove('drag'); handleFile(e.dataTransfer.files[0]); });
+document.addEventListener('paste', e => { const items = e.clipboardData && e.clipboardData.items; if (!items) return; for (let i = 0; i < items.length; i++) if (items[i].type.startsWith('image/')) { handleFile(items[i].getAsFile()); break; } });
+document.getElementById('text-input').addEventListener('keydown', e => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) solveText(); });
+setTimeout(() => toast('Ready!', 'Watch your screen, upload a photo, or type — OCR reads everything!', 'good', 4000), 600);
+</script>
+</body>
+</html>
