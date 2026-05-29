@@ -219,7 +219,10 @@
                 <span id="live-timer-text">00:00</span>
               </div>
             </div>
-            <div id="viewport-stream-container" class="viewport-stream-container"><canvas id="viewport-canvas" class="viewport-video"></canvas></div>
+            <div id="viewport-stream-container" class="viewport-stream-container">
+              <canvas id="viewport-canvas" class="viewport-video"></canvas>
+              <video id="viewport-video-preview" class="viewport-video" autoplay muted playsinline style="display: none; width: 100%; height: 100%; object-fit: contain;"></video>
+            </div>
             <div id="viewport-placeholder" class="viewport-placeholder">
               <div class="placeholder-glow-ring">
                 <i class="placeholder-icon" data-lucide="monitor" style="width: 36px; height: 36px;"></i>
@@ -379,6 +382,7 @@
         </div>
       </div>
     </div>
+    <div id="hidden-video-container" style="position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: hidden; opacity: 0; pointer-events: none; z-index: -9999;"></div>
     <script src="https://unpkg.com/lucide@latest"></script>
     <script>
       const DB_NAME = 'AuraCaptureDB', STORE_NAME = 'recordings', DB_VERSION = 1;
@@ -431,17 +435,16 @@
           };
         });
       }
-
       let isRecording = false, isPaused = false, recordingMode = 'screen', includeMic = true, includeSysAudio = true;
       let resolution = 'default', fps = 60, pipPosition = 'bottom-right', pipShape = 'circle', recordingsList = [];
       let timerSeconds = 0, timerInterval = null, startTime = 0, mediaRecorder = null, recordedChunks = [];
       let screenStream = null, webcamStream = null, micStream = null, mixedAudioStream = null, screenVideoEl = null, webcamVideoEl = null;
       let compositionLoopId = null, visualizerLoopId = null, activeAudioCtx = null, modalBlobUrl = null;
-
       const el = {
         toast: document.getElementById('status-toast'), toastText: document.getElementById('toast-text'), toastIcon: document.getElementById('toast-icon'),
         viewport: document.getElementById('studio-viewport'), viewportPlaceholder: document.getElementById('viewport-placeholder'),
         viewportStreamContainer: document.getElementById('viewport-stream-container'), viewportCanvas: document.getElementById('viewport-canvas'),
+        viewportVideoPreview: document.getElementById('viewport-video-preview'),
         viewportLiveOverlay: document.getElementById('viewport-live-overlay'), liveBadgeText: document.getElementById('live-badge-text'), liveTimerText: document.getElementById('live-timer-text'),
         btnModeScreen: document.getElementById('btn-mode-screen'), btnModeStudio: document.getElementById('btn-mode-studio'), btnModeWebcam: document.getElementById('btn-mode-webcam'),
         cardToggleMic: document.getElementById('card-toggle-mic'), cardToggleSys: document.getElementById('card-toggle-sys'),
@@ -456,7 +459,6 @@
         modalMetaRes: document.getElementById('modal-meta-res'), modalMetaFps: document.getElementById('modal-meta-fps'), modalMetaSize: document.getElementById('modal-meta-size'),
         btnModalClose: document.getElementById('btn-modal-close'), btnModalCancel: document.getElementById('btn-modal-cancel'), btnModalDownload: document.getElementById('btn-modal-download')
       };
-
       function showToast(text, type = 'success') {
         el.toastText.textContent = text; el.toast.className = `status-toast ${type}`;
         el.toastIcon.setAttribute('data-lucide', type === 'error' ? 'alert-circle' : 'check');
@@ -464,7 +466,6 @@
         if (window.toastTimeout) clearTimeout(window.toastTimeout);
         window.toastTimeout = setTimeout(() => el.toast.style.display = 'none', 4000);
       }
-
       function initSettingsUI() {
         el.btnModeScreen.addEventListener('click', () => setMode('screen'));
         el.btnModeStudio.addEventListener('click', () => setMode('studio'));
@@ -490,7 +491,6 @@
         el.selectPipShape.addEventListener('change', (e) => pipShape = e.target.value);
         el.btnSyncDb.addEventListener('click', loadRecordings);
       }
-
       function startCompositingLoop(canvas, screenVid, webcamVid) {
         const ctx = canvas.getContext('2d'); if (!ctx) return;
         function draw() {
@@ -511,7 +511,7 @@
               if (pipShape === 'circle') { ctx.beginPath(); ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2); ctx.clip(); }
               ctx.drawImage(webcamVid, x, y, size, size); ctx.restore();
               ctx.strokeStyle = '#00f2fe'; ctx.lineWidth = 4;
-              if (pipShape === 'circle') { ctx.beginPath(); ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2); stroke(); }
+              if (pipShape === 'circle') { ctx.beginPath(); ctx.arc(x + size/2, y + size/2, size/2, 0, Math.PI*2); ctx.stroke(); }
               else { ctx.beginPath(); ctx.roundRect(x, y, size, size, 12); ctx.stroke(); }
             }
           }
@@ -519,7 +519,6 @@
         }
         draw();
       }
-
       function startAudioVisualizer(stream) {
         const tracks = stream.getAudioTracks(); if (tracks.length === 0) { el.audioVisualRow.style.display = 'none'; return; }
         el.audioVisualRow.style.display = 'flex';
@@ -549,13 +548,14 @@
           drawVisuals();
         } catch (e) { console.error(e); }
       }
-
-      function stopAudioVisualizer() {
+      function stopAudioVisualizer(closeContext = false) {
         if (visualizerLoopId) cancelAnimationFrame(visualizerLoopId);
-        if (activeAudioCtx && activeAudioCtx.state !== 'closed') activeAudioCtx.close();
+        if (closeContext && activeAudioCtx && activeAudioCtx.state !== 'closed') {
+          activeAudioCtx.close();
+          activeAudioCtx = null;
+        }
         el.audioVisualRow.style.display = 'none';
       }
-
       async function startRecording() {
         try {
           recordedChunks = []; screenStream = null; webcamStream = null; micStream = null; mixedAudioStream = null;
@@ -585,49 +585,94 @@
               micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
             } catch (err) { console.warn(err); showToast('Microphone access denied', 'error'); }
           }
-          const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          const dest = audioCtx.createMediaStreamDestination(); let hasAudio = false;
+          
+          activeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          const dest = activeAudioCtx.createMediaStreamDestination(); let hasAudio = false;
           if (includeSysAudio && screenStream && screenStream.getAudioTracks().length > 0) {
-            audioCtx.createMediaStreamSource(new MediaStream([screenStream.getAudioTracks()[0]])).connect(dest); hasAudio = true;
+            activeAudioCtx.createMediaStreamSource(new MediaStream([screenStream.getAudioTracks()[0]])).connect(dest); hasAudio = true;
           }
           if (includeMic && micStream && micStream.getAudioTracks().length > 0) {
-            audioCtx.createMediaStreamSource(new MediaStream([micStream.getAudioTracks()[0]])).connect(dest); hasAudio = true;
+            activeAudioCtx.createMediaStreamSource(new MediaStream([micStream.getAudioTracks()[0]])).connect(dest); hasAudio = true;
           }
           if (hasAudio) mixedAudioStream = dest.stream;
-
           const canvas = el.viewportCanvas;
-          if (recordingMode === 'screen' || recordingMode === 'studio') {
+          let finalStream = null;
+          let recordWidth = 1280;
+          let recordHeight = 720;
+          if (recordingMode === 'screen') {
             const settings = screenStream.getVideoTracks()[0].getSettings();
-            canvas.width = resolution === '1080p' ? 1920 : resolution === '720p' ? 1280 : (settings.width || 1280);
-            canvas.height = resolution === '1080p' ? 1080 : resolution === '720p' ? 720 : (settings.height || 720);
-          } else { canvas.width = 1280; canvas.height = 720; }
-
-          if (screenStream) {
-            screenVideoEl = document.createElement('video'); screenVideoEl.srcObject = screenStream; screenVideoEl.muted = true;
-            screenVideoEl.playsInline = true; await screenVideoEl.play();
+            recordWidth = settings.width || 1280;
+            recordHeight = settings.height || 720;
+            
+            finalStream = new MediaStream();
+            finalStream.addTrack(screenStream.getVideoTracks()[0]);
+            if (mixedAudioStream && mixedAudioStream.getAudioTracks().length > 0) {
+              finalStream.addTrack(mixedAudioStream.getAudioTracks()[0]);
+            } else if (screenStream.getAudioTracks().length > 0) {
+              finalStream.addTrack(screenStream.getAudioTracks()[0]);
+            }
+            
+            el.viewportVideoPreview.srcObject = screenStream;
+            el.viewportVideoPreview.play().catch(e => console.warn(e));
+            
+          } else if (recordingMode === 'webcam') {
+            const settings = webcamStream.getVideoTracks()[0].getSettings();
+            recordWidth = settings.width || 1280;
+            recordHeight = settings.height || 720;
+            
+            finalStream = new MediaStream();
+            finalStream.addTrack(webcamStream.getVideoTracks()[0]);
+            if (mixedAudioStream && mixedAudioStream.getAudioTracks().length > 0) {
+              finalStream.addTrack(mixedAudioStream.getAudioTracks()[0]);
+            }
+            
+            el.viewportVideoPreview.srcObject = webcamStream;
+            el.viewportVideoPreview.play().catch(e => console.warn(e));
+            
+          } else { // Studio PIP mode
+            if (screenStream) {
+              const settings = screenStream.getVideoTracks()[0].getSettings();
+              canvas.width = resolution === '1080p' ? 1920 : resolution === '720p' ? 1280 : (settings.width || 1280);
+              canvas.height = resolution === '1080p' ? 1080 : resolution === '720p' ? 720 : (settings.height || 720);
+            } else {
+              canvas.width = 1280; canvas.height = 720;
+            }
+            recordWidth = canvas.width;
+            recordHeight = canvas.height;
+            const hiddenContainer = document.getElementById('hidden-video-container');
+            if (screenStream) {
+              screenVideoEl = document.createElement('video'); screenVideoEl.srcObject = screenStream; screenVideoEl.muted = true;
+              screenVideoEl.playsInline = true; hiddenContainer.appendChild(screenVideoEl); await screenVideoEl.play();
+            }
+            if (webcamStream) {
+              webcamVideoEl = document.createElement('video'); webcamVideoEl.srcObject = webcamStream; webcamVideoEl.muted = true;
+              webcamVideoEl.playsInline = true; hiddenContainer.appendChild(webcamVideoEl); await webcamVideoEl.play();
+            }
+            startCompositingLoop(canvas, screenVideoEl, webcamVideoEl);
+            finalStream = canvas.captureStream(fps);
+            if (mixedAudioStream && mixedAudioStream.getAudioTracks().length > 0) {
+              finalStream.addTrack(mixedAudioStream.getAudioTracks()[0]);
+            }
           }
-          if (webcamStream) {
-            webcamVideoEl = document.createElement('video'); webcamVideoEl.srcObject = webcamStream; webcamVideoEl.muted = true;
-            webcamVideoEl.playsInline = true; await webcamVideoEl.play();
+          let options = {};
+          const hasAudioTracks = finalStream.getAudioTracks().length > 0;
+          if (hasAudioTracks) {
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) options = { mimeType: 'video/webm;codecs=vp9,opus' };
+            else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) options = { mimeType: 'video/webm;codecs=vp8,opus' };
+          } else {
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) options = { mimeType: 'video/webm;codecs=vp9' };
+            else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) options = { mimeType: 'video/webm;codecs=vp8' };
           }
-          startCompositingLoop(canvas, screenVideoEl, webcamVideoEl);
-          const finalStream = canvas.captureStream(fps);
-          if (mixedAudioStream && mixedAudioStream.getAudioTracks().length > 0) finalStream.addTrack(mixedAudioStream.getAudioTracks()[0]);
-
-          const options = { mimeType: 'video/webm;codecs=vp9,opus' };
-          if (MediaRecorder.isTypeSupported(options.mimeType)) mediaRecorder = new MediaRecorder(finalStream, options);
-          else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) mediaRecorder = new MediaRecorder(finalStream, { mimeType: 'video/webm;codecs=vp8,opus' });
-          else mediaRecorder = new MediaRecorder(finalStream);
-
+          mediaRecorder = new MediaRecorder(finalStream, options);
           mediaRecorder.ondataavailable = (event) => { if (event.data && event.data.size > 0) recordedChunks.push(event.data); };
           mediaRecorder.onstop = async () => {
             if (compositionLoopId) cancelAnimationFrame(compositionLoopId);
-            stopAudioVisualizer(); stopTimer();
+            stopAudioVisualizer(true); stopTimer();
             const durationMs = Date.now() - startTime, finalBlob = new Blob(recordedChunks, { type: 'video/webm' });
             cleanupStreams();
             if (finalBlob.size > 0) {
               const ts = Date.now(), dStr = new Date(ts).toISOString().split('T')[0], tStr = new Date(ts).toTimeString().split(' ')[0].replace(/:/g, '-');
-              const newRec = { id: `clip_${ts}`, title: `Capture ${dStr} ${tStr}`, blob: finalBlob, duration: durationMs, createdAt: ts, size: finalBlob.size, resolution: `${canvas.width}x${canvas.height}`, fps: fps };
+              const newRec = { id: `clip_${ts}`, title: `Capture ${dStr} ${tStr}`, blob: finalBlob, duration: durationMs, createdAt: ts, size: finalBlob.size, resolution: `${recordWidth}x${recordHeight}`, fps: fps };
               try {
                 await saveRecording(newRec); showToast('Recording saved to browser library!', 'success'); loadRecordings();
               } catch (e) {
@@ -644,7 +689,6 @@
           showToast(err.message || 'An unexpected error occurred during startup.', 'error');
         }
       }
-
       function stopRecording() { if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop(); }
       function togglePauseResume() {
         if (!mediaRecorder || !isRecording) return;
@@ -658,10 +702,9 @@
           mediaRecorder.pause(); clearInterval(timerInterval); timerInterval = null; isPaused = true;
           el.liveBadgeText.textContent = 'PAUSED'; el.textPauseResume.textContent = 'Resume';
           el.iconPauseResume.setAttribute('data-lucide', 'play'); lucide.createIcons();
-          if (compositionLoopId) cancelAnimationFrame(compositionLoopId); stopAudioVisualizer(); showToast('Recording paused');
+          if (compositionLoopId) cancelAnimationFrame(compositionLoopId); stopAudioVisualizer(false); showToast('Recording paused');
         }
       }
-
       function startTimer() {
         timerSeconds = 0; el.liveTimerText.textContent = '00:00'; el.btnTimerDisplay.textContent = '00:00';
         timerInterval = setInterval(() => { timerSeconds++; el.liveTimerText.textContent = formatDuration(timerSeconds * 1000); el.btnTimerDisplay.textContent = formatDuration(timerSeconds * 1000); }, 1000);
@@ -671,9 +714,10 @@
         if (screenStream) { screenStream.getTracks().forEach(t => t.stop()); screenStream = null; }
         if (webcamStream) { webcamStream.getTracks().forEach(t => t.stop()); webcamStream = null; }
         if (micStream) { micStream.getTracks().forEach(t => t.stop()); micStream = null; }
-        screenVideoEl = null; webcamVideoEl = null;
+        if (screenVideoEl) { screenVideoEl.remove(); screenVideoEl = null; }
+        if (webcamVideoEl) { webcamVideoEl.remove(); webcamVideoEl = null; }
+        el.viewportVideoPreview.srcObject = null;
       }
-
       function updateControlsUI() {
         if (isRecording) {
           el.viewportPlaceholder.style.display = 'none'; el.viewportStreamContainer.style.display = 'block';
@@ -681,6 +725,14 @@
           document.querySelectorAll('.mode-btn, .audio-toggle-card, .select-input').forEach(n => { n.style.pointerEvents = 'none'; if (n.tagName === 'SELECT') n.disabled = true; });
           el.btnRecordMaster.className = 'btn-record-master recording'; el.btnRecordText.textContent = 'Stop & Save Recording';
           el.btnRecordMaster.querySelector('.live-dot').style.display = 'none'; el.recordingSubControls.style.display = 'grid';
+          
+          if (recordingMode === 'studio') {
+            el.viewportCanvas.style.display = 'block';
+            el.viewportVideoPreview.style.display = 'none';
+          } else {
+            el.viewportCanvas.style.display = 'none';
+            el.viewportVideoPreview.style.display = 'block';
+          }
         } else {
           el.viewportPlaceholder.style.display = 'flex'; el.viewportStreamContainer.style.display = 'none';
           el.viewportLiveOverlay.style.display = 'none'; el.viewport.classList.remove('recording');
@@ -688,13 +740,14 @@
           if (recordingMode === 'webcam') { el.cardToggleSys.style.opacity = '0.4'; el.cardToggleSys.style.pointerEvents = 'none'; }
           el.btnRecordMaster.className = 'btn-record-master'; el.btnRecordText.textContent = 'Start Stream Record';
           el.btnRecordMaster.querySelector('.live-dot').style.display = 'block'; el.recordingSubControls.style.display = 'none';
+          el.viewportCanvas.style.display = 'none';
+          el.viewportVideoPreview.style.display = 'none';
+          el.viewportVideoPreview.srcObject = null;
         }
       }
-
       async function loadRecordings() {
         try { recordingsList = await getAllRecordings(); renderGallery(); } catch (err) { showToast('Failed to sync clips', 'error'); }
       }
-
       function renderGallery() {
         el.galleryGrid.innerHTML = '';
         if (recordingsList.length === 0) {
@@ -749,7 +802,6 @@
         });
         lucide.createIcons();
       }
-
       function openVideoModal(clip) {
         el.modalTitle.textContent = clip.title; el.modalMetaRes.textContent = `Resolution: ${clip.resolution}`;
         el.modalMetaFps.textContent = `Frame Rate: ${clip.fps} FPS`; el.modalMetaSize.textContent = `File Size: ${formatSize(clip.size)}`;
@@ -758,7 +810,6 @@
         const clone = el.btnModalDownload.cloneNode(true); el.btnModalDownload.parentNode.replaceChild(clone, el.btnModalDownload);
         el.btnModalDownload = clone; el.btnModalDownload.addEventListener('click', () => triggerDownload(clip.blob, `${clip.title.replace(/\s+/g, '_')}.webm`));
       }
-
       function closeVideoModal() {
         el.modalOverlay.style.display = 'none'; el.modalVideoPlayer.pause(); el.modalVideoPlayer.src = '';
         if (modalBlobUrl) { URL.revokeObjectURL(modalBlobUrl); modalBlobUrl = null; }
@@ -766,7 +817,6 @@
       el.btnModalClose.addEventListener('click', closeVideoModal);
       el.btnModalCancel.addEventListener('click', closeVideoModal);
       el.modalOverlay.addEventListener('click', (e) => { if (e.target === el.modalOverlay) closeVideoModal(); });
-
       function formatDuration(ms) {
         const s = Math.floor((ms / 1000) % 60), m = Math.floor((ms / (1000 * 60)) % 60), h = Math.floor((ms / (1000 * 60 * 60)) % 24);
         return `${h > 0 ? h.toString().padStart(2, '0') + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -780,7 +830,6 @@
         const url = URL.createObjectURL(blob), a = document.createElement('a');
         a.href = url; a.download = name; document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
       }
-
       function init() {
         el.btnRecordMaster.addEventListener('click', () => { if (!isRecording) startRecording(); else stopRecording(); });
         el.btnPauseResume.addEventListener('click', togglePauseResume);
