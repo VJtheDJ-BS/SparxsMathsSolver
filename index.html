@@ -381,6 +381,51 @@
           </div>
         </div>
       </div>
+      <div id="modal-share-overlay" class="modal-overlay" style="display: none;">
+        <div class="modal-content" style="max-width: 600px;">
+          <div class="modal-header">
+            <span class="modal-title">Share & Embed Options</span>
+            <button id="btn-share-close" class="modal-close-btn"><i data-lucide="x" style="width: 20px; height: 20px;"></i></button>
+          </div>
+          <div class="modal-body" style="gap: 1.5rem;">
+            <div class="setting-row">
+              <span class="setting-label">1. HTML5 Video Embed (for downloaded file)</span>
+              <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Download your video, place it in your website folder, and paste this code:</p>
+              <div style="position: relative; display: flex; flex-direction: column;">
+                <textarea id="share-html-snippet" class="select-input" style="font-family: var(--font-mono); font-size: 0.8rem; height: 75px; resize: none; background: rgba(5,5,15,0.8); padding-right: 90px;" readonly></textarea>
+                <button id="btn-copy-html" class="btn-download-clip" style="position: absolute; right: 8px; bottom: 8px; padding: 0.35rem 0.75rem; font-size: 0.75rem;">Copy Code</button>
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">2. Recorder App Iframe (embed this tool)</span>
+              <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.25rem;">Embed this screen recorder directly onto another website:</p>
+              <div style="position: relative; display: flex; flex-direction: column;">
+                <textarea id="share-iframe-snippet" class="select-input" style="font-family: var(--font-mono); font-size: 0.8rem; height: 75px; resize: none; background: rgba(5,5,15,0.8); padding-right: 90px;" readonly></textarea>
+                <button id="btn-copy-iframe" class="btn-download-clip" style="position: absolute; right: 8px; bottom: 8px; padding: 0.35rem 0.75rem; font-size: 0.75rem;">Copy Code</button>
+              </div>
+            </div>
+            <div class="setting-row" style="border-top: 1px solid var(--border-glow); padding-top: 1.25rem;">
+              <span class="setting-label">3. Base64 Data URL (self-contained link)</span>
+              <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Convert the video into a Base64 text string that plays directly in browsers. recommended only for short videos.</p>
+              <button id="btn-copy-dataurl" class="btn-download-clip" style="width: 100%; padding: 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                <i data-lucide="link" style="width: 16px; height: 16px;"></i>
+                <span id="btn-copy-dataurl-text">Generate & Copy Base64 Link</span>
+              </button>
+            </div>
+            <div class="setting-row" style="border-top: 1px solid var(--border-glow); padding-top: 1.25rem;">
+              <span class="setting-label">4. Direct Public Streaming Link (Cloud Host)</span>
+              <p style="font-size: 0.75rem; color: var(--color-text-secondary); margin-bottom: 0.5rem;">Upload your recording to a free public server (PixelDrain) to generate a permanent direct link that you can paste straight into your HTML video source tags. Files are kept permanently as long as they get viewed at least once every 100 days.</p>
+              <button id="btn-upload-cloud" class="btn-download-clip" style="width: 100%; padding: 0.65rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem; background: rgba(0, 255, 102, 0.05); color: var(--color-success); border-color: rgba(0, 255, 102, 0.3);">
+                <i data-lucide="cloud-upload" style="width: 16px; height: 16px;"></i>
+                <span id="btn-upload-cloud-text">Upload Video & Get Public Link</span>
+              </button>
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button id="btn-share-cancel" class="sub-btn">Close</button>
+          </div>
+        </div>
+      </div>
     </div>
     <div id="hidden-video-container" style="position: fixed; top: 0; left: 0; width: 0; height: 0; overflow: hidden; opacity: 0; pointer-events: none; z-index: -9999;"></div>
     <script src="https://unpkg.com/lucide@latest"></script>
@@ -457,7 +502,18 @@
         galleryGrid: document.getElementById('gallery-grid'), btnSyncDb: document.getElementById('btn-sync-db'),
         modalOverlay: document.getElementById('modal-overlay'), modalTitle: document.getElementById('modal-title'), modalVideoPlayer: document.getElementById('modal-video-player'),
         modalMetaRes: document.getElementById('modal-meta-res'), modalMetaFps: document.getElementById('modal-meta-fps'), modalMetaSize: document.getElementById('modal-meta-size'),
-        btnModalClose: document.getElementById('btn-modal-close'), btnModalCancel: document.getElementById('btn-modal-cancel'), btnModalDownload: document.getElementById('btn-modal-download')
+        btnModalClose: document.getElementById('btn-modal-close'), btnModalCancel: document.getElementById('btn-modal-cancel'), btnModalDownload: document.getElementById('btn-modal-download'),
+        modalShareOverlay: document.getElementById('modal-share-overlay'),
+        shareHtmlSnippet: document.getElementById('share-html-snippet'),
+        shareIframeSnippet: document.getElementById('share-iframe-snippet'),
+        btnShareClose: document.getElementById('btn-share-close'),
+        btnShareCancel: document.getElementById('btn-share-cancel'),
+        btnCopyHtml: document.getElementById('btn-copy-html'),
+        btnCopyIframe: document.getElementById('btn-copy-iframe'),
+        btnCopyDataurl: document.getElementById('btn-copy-dataurl'),
+        btnCopyDataurlText: document.getElementById('btn-copy-dataurl-text'),
+        btnUploadCloud: document.getElementById('btn-upload-cloud'),
+        btnUploadCloudText: document.getElementById('btn-upload-cloud-text')
       };
       function showToast(text, type = 'success') {
         el.toastText.textContent = text; el.toast.className = `status-toast ${type}`;
@@ -776,14 +832,16 @@
                 </div>
               </div>
               <div class="clip-meta-row"><span>${new Date(clip.createdAt).toLocaleDateString()}</span><span>${formatSize(clip.size)}</span></div>
-              <div class="clip-actions">
+              <div class="clip-actions" style="grid-template-columns: 1fr auto auto;">
                 <button class="btn-download-clip" data-action="download"><i data-lucide="download" style="width: 14px; height: 14px;"></i><span>Download Video</span></button>
+                <button class="btn-download-clip" data-action="share" style="background: rgba(0, 242, 254, 0.05); color: var(--color-secondary); padding: 0.5rem;" title="Share & Embed"><i data-lucide="share-2" style="width: 14px; height: 14px;"></i></button>
                 <button class="btn-delete-clip" data-action="delete"><i data-lucide="trash-2" style="width: 14px; height: 14px;"></i></button>
               </div>
             </div>
           `;
           card.querySelector('[data-action="play"]').addEventListener('click', () => openVideoModal(clip));
           card.querySelector('[data-action="download"]').addEventListener('click', () => { triggerDownload(clip.blob, `${clip.title.replace(/\s+/g, '_')}.webm`); showToast('Downloading file...'); });
+          card.querySelector('[data-action="share"]').addEventListener('click', () => openShareModal(clip));
           card.querySelector('[data-action="delete"]').addEventListener('click', async () => {
             if (confirm('Permanently delete this clip?')) { await deleteRecording(clip.id); showToast('Recording deleted'); loadRecordings(); }
           });
@@ -817,6 +875,25 @@
       el.btnModalClose.addEventListener('click', closeVideoModal);
       el.btnModalCancel.addEventListener('click', closeVideoModal);
       el.modalOverlay.addEventListener('click', (e) => { if (e.target === el.modalOverlay) closeVideoModal(); });
+      let activeShareBlob = null;
+      function openShareModal(clip) {
+        activeShareBlob = clip.blob;
+        const filename = `${clip.title.replace(/\s+/g, '_')}.webm`;
+        const videoSnippet = `<video src="${filename}" controls style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></video>`;
+        el.shareHtmlSnippet.value = videoSnippet;
+        const pageUrl = window.location.href.split('?')[0].split('#')[0];
+        const iframeSnippet = `<iframe src="${pageUrl}" width="100%" height="680" allow="display-capture; microphone; camera" style="border: none; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);"></iframe>`;
+        el.shareIframeSnippet.value = iframeSnippet;
+        el.btnCopyDataurlText.textContent = "Generate & Copy Base64 Link";
+        el.btnCopyDataurl.disabled = false;
+        el.btnUploadCloudText.textContent = "Upload Video & Get Public Link";
+        el.btnUploadCloud.disabled = false;
+        el.modalShareOverlay.style.display = 'flex';
+      }
+      function closeShareModal() {
+        el.modalShareOverlay.style.display = 'none';
+        activeShareBlob = null;
+      }
       function formatDuration(ms) {
         const s = Math.floor((ms / 1000) % 60), m = Math.floor((ms / (1000 * 60)) % 60), h = Math.floor((ms / (1000 * 60 * 60)) % 24);
         return `${h > 0 ? h.toString().padStart(2, '0') + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -834,6 +911,82 @@
         el.btnRecordMaster.addEventListener('click', () => { if (!isRecording) startRecording(); else stopRecording(); });
         el.btnPauseResume.addEventListener('click', togglePauseResume);
         initSettingsUI(); loadRecordings();
+        el.btnCopyHtml.addEventListener('click', () => {
+          navigator.clipboard.writeText(el.shareHtmlSnippet.value);
+          showToast('HTML code snippet copied to clipboard!', 'success');
+        });
+        el.btnCopyIframe.addEventListener('click', () => {
+          navigator.clipboard.writeText(el.shareIframeSnippet.value);
+          showToast('Iframe embed code copied to clipboard!', 'success');
+        });
+        el.btnCopyDataurl.addEventListener('click', () => {
+          if (!activeShareBlob) return;
+          el.btnCopyDataurlText.textContent = "Generating...";
+          el.btnCopyDataurl.disabled = true;
+          const reader = new FileReader();
+          reader.onload = function(e) {
+            navigator.clipboard.writeText(e.target.result).then(() => {
+              el.btnCopyDataurlText.textContent = "Copied Base64 Link!";
+              showToast('Base64 Data URL copied to clipboard!', 'success');
+              setTimeout(() => {
+                el.btnCopyDataurlText.textContent = "Generate & Copy Base64 Link";
+                el.btnCopyDataurl.disabled = false;
+              }, 2000);
+            }).catch(err => {
+              el.btnCopyDataurlText.textContent = "Copy Failed";
+              showToast('Copy failed. File too large for clipboard.', 'error');
+              el.btnCopyDataurl.disabled = false;
+            });
+          };
+          reader.onerror = () => {
+            showToast('Failed to read video file.', 'error');
+            el.btnCopyDataurlText.textContent = "Generate & Copy Base64 Link";
+            el.btnCopyDataurl.disabled = false;
+          };
+          reader.readAsDataURL(activeShareBlob);
+        });
+        el.btnUploadCloud.addEventListener('click', () => {
+          if (!activeShareBlob) return;
+          el.btnUploadCloudText.textContent = "Uploading to Cloud...";
+          el.btnUploadCloud.disabled = true;
+          const formData = new FormData();
+          formData.append('file', activeShareBlob, 'recording.webm');
+          fetch('https://pixeldrain.com/api/file', {
+            method: 'POST',
+            body: formData
+          })
+          .then(res => {
+            if (!res.ok) throw new Error('Upload failed');
+            return res.json();
+          })
+          .then(data => {
+            if (data.success && data.id) {
+              const directLink = `https://pixeldrain.com/api/file/${data.id}`;
+              navigator.clipboard.writeText(directLink).then(() => {
+                el.btnUploadCloudText.textContent = "Copied Streaming Link!";
+                showToast('Direct stream link copied to clipboard!', 'success');
+                setTimeout(() => {
+                  el.btnUploadCloudText.textContent = "Upload Video & Get Public Link";
+                  el.btnUploadCloud.disabled = false;
+                }, 2000);
+              });
+            } else {
+              throw new Error('Upload unsuccessful');
+            }
+          })
+          .catch(err => {
+            console.error(err);
+            el.btnUploadCloudText.textContent = "Upload Failed";
+            showToast('Cloud upload failed. Please try again.', 'error');
+            setTimeout(() => {
+              el.btnUploadCloudText.textContent = "Upload Video & Get Public Link";
+              el.btnUploadCloud.disabled = false;
+            }, 2000);
+          });
+        });
+        el.btnShareClose.addEventListener('click', closeShareModal);
+        el.btnShareCancel.addEventListener('click', closeShareModal);
+        el.modalShareOverlay.addEventListener('click', (e) => { if (e.target === el.modalShareOverlay) closeShareModal(); });
         const canvas = el.visualizerCanvas, ctx = canvas.getContext('2d');
         if (ctx) {
           ctx.clearRect(0, 0, canvas.width, canvas.height); ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)'; ctx.lineWidth = 2;
