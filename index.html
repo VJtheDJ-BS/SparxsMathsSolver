@@ -266,7 +266,7 @@
                   <span>Microphone</span>
                   <p>Voice overlay, narration</p>
                 </div>
-                <div id="card-toggle-sys" class="audio-toggle-card">
+                <div id="card-toggle-sys" class="audio-toggle-card active">
                   <div class="audio-toggle-header">
                     <i class="audio-toggle-icon" data-lucide="volume-2" style="width: 18px; height: 18px;"></i>
                     <div class="toggle-switch"><div class="toggle-knob"></div></div>
@@ -283,6 +283,7 @@
                   <span class="setting-label" style="font-size: 0.75rem;">Resolution Limit</span>
                   <select id="select-resolution" class="select-input">
                     <option value="default">Adaptive Native</option>
+                    <option value="4k">4K (Ultra HD - 2160p)</option>
                     <option value="1080p">1080p (Full HD)</option>
                     <option value="720p">720p (HD)</option>
                   </select>
@@ -290,6 +291,7 @@
                 <div class="setting-row">
                   <span class="setting-label" style="font-size: 0.75rem;">Frame Rate Target</span>
                   <select id="select-fps" class="select-input">
+                    <option value="90">90 FPS (Extreme Smooth)</option>
                     <option value="60">60 FPS (Ultra Smooth)</option>
                     <option value="30">30 FPS (Standard)</option>
                     <option value="15">15 FPS (Eco Mode)</option>
@@ -316,6 +318,30 @@
                     <option value="square">Rounded Rect</option>
                   </select>
                 </div>
+              </div>
+            </div>
+            <div class="setting-row" style="border-top: 1px solid var(--border-glow); padding-top: 1.25rem;">
+              <span class="setting-label">5. Firebase Cloud Sync</span>
+              <div style="display: flex; flex-direction: column; gap: 0.75rem; margin-top: 0.25rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between; background: rgba(10,10,26,0.3); padding: 0.5rem 0.75rem; border-radius: 8px; border: 1px solid var(--border-glow);">
+                  <span style="font-size: 0.8rem; color: var(--color-text-secondary);">Status:</span>
+                  <div style="display: flex; align-items: center; gap: 0.5rem;">
+                    <div id="firebase-status-dot" style="width: 8px; height: 8px; background: var(--color-text-muted); border-radius: 50%;"></div>
+                    <span id="firebase-status-text" style="font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted);">Disconnected</span>
+                  </div>
+                </div>
+                <div id="firebase-config-area" style="display: flex; flex-direction: column; gap: 0.5rem;">
+                  <span class="setting-label" style="font-size: 0.75rem;">Paste Firebase Config JSON</span>
+                  <textarea id="firebase-config-input" class="select-input" style="font-family: var(--font-mono); font-size: 0.75rem; height: 100px; resize: vertical; background: rgba(5,5,15,0.6); padding: 0.5rem;" placeholder='{&#10;  "apiKey": "...",&#10;  "projectId": "...",&#10;  "storageBucket": "..."&#10;}'></textarea>
+                  <button id="btn-firebase-connect" class="btn-download-clip" style="width: 100%; padding: 0.5rem; display: flex; align-items: center; justify-content: center; gap: 0.5rem;">
+                    <i data-lucide="wifi" style="width: 14px; height: 14px;"></i>
+                    <span>Connect & Sync</span>
+                  </button>
+                </div>
+                <button id="btn-firebase-disconnect" class="btn-delete-clip" style="width: 100%; padding: 0.5rem; display: none; align-items: center; justify-content: center; gap: 0.5rem;">
+                  <i data-lucide="wifi-off" style="width: 14px; height: 14px;"></i>
+                  <span>Disconnect Cloud</span>
+                </button>
               </div>
             </div>
             <div id="audio-visual-row" class="audio-visual-row" style="display: none;">
@@ -480,11 +506,147 @@
           };
         });
       }
-      let isRecording = false, isPaused = false, recordingMode = 'screen', includeMic = false, includeSysAudio = false;
-      let resolution = 'default', fps = 60, pipPosition = 'bottom-right', pipShape = 'circle', recordingsList = [];
+      async function connectFirebase(config) {
+        try {
+          if (!fbInitializeApp) {
+            const appMod = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js");
+            fbInitializeApp = appMod.initializeApp;
+            
+            const fsMod = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js");
+            fbGetFirestore = fsMod.getFirestore;
+            fbCollection = fsMod.collection;
+            fbDoc = fsMod.doc;
+            fbSetDoc = fsMod.setDoc;
+            fbGetDocs = fsMod.getDocs;
+            fbDeleteDoc = fsMod.deleteDoc;
+            
+            const stMod = await import("https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js");
+            fbGetStorage = stMod.getStorage;
+            fbRef = stMod.ref;
+            fbUploadBytes = stMod.uploadBytes;
+            fbGetDownloadURL = stMod.getDownloadURL;
+            fbDeleteObject = stMod.deleteObject;
+          }
+          firebaseApp = fbInitializeApp(config);
+          dbFirebase = fbGetFirestore(firebaseApp);
+          storageFirebase = fbGetStorage(firebaseApp);
+          isFirebaseConnected = true;
+          // Update UI
+          el.firebaseStatusDot.style.background = 'var(--color-success)';
+          el.firebaseStatusDot.style.boxShadow = '0 0 8px var(--color-success)';
+          el.firebaseStatusText.textContent = 'Connected & Synced';
+          el.firebaseStatusText.style.color = 'var(--color-success)';
+          el.firebaseConfigArea.style.display = 'none';
+          el.btnFirebaseDisconnect.style.display = 'flex';
+          
+          showToast('Firebase Connected successfully!', 'success');
+          
+          // Trigger a sync
+          await syncFirebaseRecordings();
+        } catch (err) {
+          console.error(err);
+          isFirebaseConnected = false;
+          showToast('Failed to connect to Firebase. Check config or console.', 'error');
+          disconnectFirebaseUI();
+        }
+      }
+      function disconnectFirebaseUI() {
+        firebaseApp = null;
+        dbFirebase = null;
+        storageFirebase = null;
+        isFirebaseConnected = false;
+        el.firebaseStatusDot.style.background = 'var(--color-text-muted)';
+        el.firebaseStatusDot.style.boxShadow = 'none';
+        el.firebaseStatusText.textContent = 'Disconnected';
+        el.firebaseStatusText.style.color = 'var(--color-text-muted)';
+        el.firebaseConfigArea.style.display = 'flex';
+        el.btnFirebaseDisconnect.style.display = 'none';
+      }
+      async function syncFirebaseRecordings() {
+        if (!isFirebaseConnected) return;
+        try {
+          const querySnapshot = await fbGetDocs(fbCollection(dbFirebase, "recordings"));
+          const cloudRecordings = [];
+          querySnapshot.forEach((doc) => {
+            cloudRecordings.push(doc.data());
+          });
+          // Merge cloud recordings into our local list
+          for (const cloudRec of cloudRecordings) {
+            const local = recordingsList.find(r => r.id === cloudRec.id);
+            if (!local) {
+              const placeholderRec = {
+                id: cloudRec.id,
+                title: cloudRec.title,
+                duration: cloudRec.duration,
+                createdAt: cloudRec.createdAt,
+                size: cloudRec.size,
+                resolution: cloudRec.resolution,
+                fps: cloudRec.fps,
+                downloadURL: cloudRec.downloadURL,
+                storagePath: cloudRec.storagePath,
+                blob: null
+              };
+              await saveRecording(placeholderRec);
+            } else if (!local.downloadURL && cloudRec.downloadURL) {
+              local.downloadURL = cloudRec.downloadURL;
+              local.storagePath = cloudRec.storagePath;
+              await saveRecording(local);
+            }
+          }
+          
+          recordingsList = await getAllRecordings();
+          renderGallery();
+        } catch (err) {
+          console.error("Firebase sync error:", err);
+          showToast("Sync failed. Check security rules.", "error");
+        }
+      }
+      async function uploadToFirebase(newRec) {
+        if (!isFirebaseConnected) return;
+        try {
+          showToast('Uploading recording to cloud...', 'info');
+          const storagePath = `recordings/${newRec.id}.webm`;
+          const storageRef = fbRef(storageFirebase, storagePath);
+          await fbUploadBytes(storageRef, newRec.blob);
+          const downloadURL = await fbGetDownloadURL(storageRef);
+          
+          const metaDoc = {
+            id: newRec.id,
+            title: newRec.title,
+            duration: newRec.duration,
+            createdAt: newRec.createdAt,
+            size: newRec.size,
+            resolution: newRec.resolution,
+            fps: newRec.fps,
+            downloadURL: downloadURL,
+            storagePath: storagePath
+          };
+          
+          await fbSetDoc(fbDoc(dbFirebase, "recordings", newRec.id), metaDoc);
+          
+          newRec.downloadURL = downloadURL;
+          newRec.storagePath = storagePath;
+          await saveRecording(newRec);
+          
+          showToast('Synced to Firebase Cloud!', 'success');
+          loadRecordings();
+        } catch (err) {
+          console.error("Firebase upload failed:", err);
+          showToast('Cloud sync failed - stored locally only', 'error');
+        }
+      }
+      function triggerDownloadUrl(url, name) {
+        const a = document.createElement('a'); a.href = url; a.download = name; a.target = '_blank';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      }
+      let isRecording = false, isPaused = false, recordingMode = 'screen', includeMic = false, includeSysAudio = true;
+      let resolution = 'default', fps = 90, pipPosition = 'bottom-right', pipShape = 'circle', recordingsList = [];
       let timerSeconds = 0, timerInterval = null, startTime = 0, mediaRecorder = null, recordedChunks = [];
       let screenStream = null, webcamStream = null, micStream = null, mixedAudioStream = null, screenVideoEl = null, webcamVideoEl = null;
       let compositionLoopId = null, visualizerLoopId = null, activeAudioCtx = null, modalBlobUrl = null;
+      let firebaseApp = null, dbFirebase = null, storageFirebase = null, isFirebaseConnected = false;
+      let fbInitializeApp = null, fbGetFirestore = null, fbCollection = null, fbDoc = null, fbSetDoc = null, fbGetDocs = null, fbDeleteDoc = null;
+      let fbGetStorage = null, fbRef = null, fbUploadBytes = null, fbGetDownloadURL = null, fbDeleteObject = null;
       const el = {
         toast: document.getElementById('status-toast'), toastText: document.getElementById('toast-text'), toastIcon: document.getElementById('toast-icon'),
         viewport: document.getElementById('studio-viewport'), viewportPlaceholder: document.getElementById('viewport-placeholder'),
@@ -513,7 +675,13 @@
         btnCopyDataurl: document.getElementById('btn-copy-dataurl'),
         btnCopyDataurlText: document.getElementById('btn-copy-dataurl-text'),
         btnUploadCloud: document.getElementById('btn-upload-cloud'),
-        btnUploadCloudText: document.getElementById('btn-upload-cloud-text')
+        btnUploadCloudText: document.getElementById('btn-upload-cloud-text'),
+        firebaseStatusDot: document.getElementById('firebase-status-dot'),
+        firebaseStatusText: document.getElementById('firebase-status-text'),
+        firebaseConfigInput: document.getElementById('firebase-config-input'),
+        firebaseConfigArea: document.getElementById('firebase-config-area'),
+        btnFirebaseConnect: document.getElementById('btn-firebase-connect'),
+        btnFirebaseDisconnect: document.getElementById('btn-firebase-disconnect')
       };
       function showToast(text, type = 'success') {
         el.toastText.textContent = text; el.toast.className = `status-toast ${type}`;
@@ -546,6 +714,37 @@
         el.selectPipPos.addEventListener('change', (e) => pipPosition = e.target.value);
         el.selectPipShape.addEventListener('change', (e) => pipShape = e.target.value);
         el.btnSyncDb.addEventListener('click', loadRecordings);
+        el.btnFirebaseConnect.addEventListener('click', async () => {
+          const configStr = el.firebaseConfigInput.value.trim();
+          if (!configStr) {
+            showToast('Please enter a Firebase Config JSON', 'error');
+            return;
+          }
+          try {
+            const config = JSON.parse(configStr);
+            localStorage.setItem('firebaseConfig', configStr);
+            await connectFirebase(config);
+          } catch (e) {
+            showToast('Invalid JSON config format', 'error');
+          }
+        });
+        el.btnFirebaseDisconnect.addEventListener('click', () => {
+          localStorage.removeItem('firebaseConfig');
+          disconnectFirebaseUI();
+          showToast('Firebase disconnected. Cloud sync turned off.', 'success');
+          loadRecordings();
+        });
+        // Auto-connect if saved configuration exists
+        const savedConfig = localStorage.getItem('firebaseConfig');
+        if (savedConfig) {
+          el.firebaseConfigInput.value = savedConfig;
+          try {
+            const config = JSON.parse(savedConfig);
+            connectFirebase(config).catch(err => console.error("Firebase auto-connect failed:", err));
+          } catch (e) {
+            console.error('Saved Firebase config parsing failed', e);
+          }
+        }
       }
       function startCompositingLoop(canvas, screenVid, webcamVid) {
         const ctx = canvas.getContext('2d'); if (!ctx) return;
@@ -616,8 +815,17 @@
         try {
           recordedChunks = []; screenStream = null; webcamStream = null; micStream = null; mixedAudioStream = null;
           if (recordingMode === 'screen' || recordingMode === 'studio') {
+            let targetWidth = undefined;
+            let targetHeight = undefined;
+            if (resolution === '4k') { targetWidth = 3840; targetHeight = 2160; }
+            else if (resolution === '1080p') { targetWidth = 1920; targetHeight = 1080; }
+            else if (resolution === '720p') { targetWidth = 1280; targetHeight = 720; }
             const constraints = {
-              video: { frameRate: fps, width: resolution === '1080p' ? 1920 : resolution === '720p' ? 1280 : undefined, height: resolution === '1080p' ? 1080 : resolution === '720p' ? 720 : undefined },
+              video: { 
+                frameRate: { ideal: fps }, 
+                width: targetWidth ? { ideal: targetWidth } : undefined, 
+                height: targetHeight ? { ideal: targetHeight } : undefined 
+              },
               audio: includeSysAudio
             };
             try {
@@ -652,11 +860,20 @@
           }
           if (includeMic) {
             try {
-              micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
+              micStream = await navigator.mediaDevices.getUserMedia({ 
+                audio: { 
+                  echoCancellation: true, 
+                  noiseSuppression: true, 
+                  autoGainControl: true,
+                  sampleRate: 48000, 
+                  sampleSize: 16, 
+                  channelCount: 2 
+                } 
+              });
             } catch (err) { console.warn(err); showToast('Microphone access denied', 'error'); }
           }
           
-          activeAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          activeAudioCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 });
           const dest = activeAudioCtx.createMediaStreamDestination(); let hasAudio = false;
           if (includeSysAudio && screenStream && screenStream.getAudioTracks().length > 0) {
             activeAudioCtx.createMediaStreamSource(new MediaStream([screenStream.getAudioTracks()[0]])).connect(dest); hasAudio = true;
@@ -665,10 +882,12 @@
             activeAudioCtx.createMediaStreamSource(new MediaStream([micStream.getAudioTracks()[0]])).connect(dest); hasAudio = true;
           }
           if (hasAudio) mixedAudioStream = dest.stream;
+ 
           const canvas = el.viewportCanvas;
           let finalStream = null;
           let recordWidth = 1280;
           let recordHeight = 720;
+ 
           if (recordingMode === 'screen') {
             const settings = screenStream.getVideoTracks()[0].getSettings();
             recordWidth = settings.width || 1280;
@@ -700,15 +919,32 @@
             el.viewportVideoPreview.play().catch(e => console.warn(e));
             
           } else { // Studio PIP mode
+            let canvasW = 1280, canvasH = 720;
             if (screenStream) {
               const settings = screenStream.getVideoTracks()[0].getSettings();
-              canvas.width = resolution === '1080p' ? 1920 : resolution === '720p' ? 1280 : (settings.width || 1280);
-              canvas.height = resolution === '1080p' ? 1080 : resolution === '720p' ? 720 : (settings.height || 720);
-            } else {
-              canvas.width = 1280; canvas.height = 720;
+              const nativeW = settings.width || 1280;
+              const nativeH = settings.height || 720;
+              const screenAspect = nativeW / nativeH;
+              
+              if (resolution === '4k') {
+                canvasH = 2160;
+                canvasW = Math.round(2160 * screenAspect);
+              } else if (resolution === '1080p') {
+                canvasH = 1080;
+                canvasW = Math.round(1080 * screenAspect);
+              } else if (resolution === '720p') {
+                canvasH = 720;
+                canvasW = Math.round(720 * screenAspect);
+              } else {
+                canvasW = nativeW;
+                canvasH = nativeH;
+              }
             }
+            canvas.width = canvasW;
+            canvas.height = canvasH;
             recordWidth = canvas.width;
             recordHeight = canvas.height;
+ 
             const hiddenContainer = document.getElementById('hidden-video-container');
             if (screenStream) {
               screenVideoEl = document.createElement('video'); screenVideoEl.srcObject = screenStream; screenVideoEl.muted = true;
@@ -724,16 +960,18 @@
               finalStream.addTrack(mixedAudioStream.getAudioTracks()[0]);
             }
           }
+ 
           let options = {};
           const hasAudioTracks = finalStream.getAudioTracks().length > 0;
           if (hasAudioTracks) {
-            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) options = { mimeType: 'video/webm;codecs=vp9,opus' };
-            else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) options = { mimeType: 'video/webm;codecs=vp8,opus' };
+            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')) options = { mimeType: 'video/webm;codecs=vp9,opus', audioBitsPerSecond: 128000 };
+            else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')) options = { mimeType: 'video/webm;codecs=vp8,opus', audioBitsPerSecond: 128000 };
           } else {
             if (MediaRecorder.isTypeSupported('video/webm;codecs=vp9')) options = { mimeType: 'video/webm;codecs=vp9' };
             else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) options = { mimeType: 'video/webm;codecs=vp8' };
           }
           mediaRecorder = new MediaRecorder(finalStream, options);
+ 
           mediaRecorder.ondataavailable = (event) => { if (event.data && event.data.size > 0) recordedChunks.push(event.data); };
           mediaRecorder.onstop = async () => {
             if (compositionLoopId) cancelAnimationFrame(compositionLoopId);
@@ -745,6 +983,9 @@
               const newRec = { id: `clip_${ts}`, title: `Capture ${dStr} ${tStr}`, blob: finalBlob, duration: durationMs, createdAt: ts, size: finalBlob.size, resolution: `${recordWidth}x${recordHeight}`, fps: fps };
               try {
                 await saveRecording(newRec); showToast('Recording saved to browser library!', 'success'); loadRecordings();
+                if (isFirebaseConnected) {
+                  uploadToFirebase(newRec);
+                }
               } catch (e) {
                 showToast('IndexedDB error, downloading file directly', 'error'); triggerDownload(finalBlob, `${newRec.title}.webm`);
               }
@@ -826,7 +1067,7 @@
         }
         recordingsList.forEach(clip => {
           const card = document.createElement('div'); card.className = 'clip-card';
-          const clipUrl = URL.createObjectURL(clip.blob);
+          const clipUrl = clip.blob ? URL.createObjectURL(clip.blob) : clip.downloadURL;
           card.innerHTML = `
             <div class="clip-thumbnail-wrapper">
               <video src="${clipUrl}" class="clip-thumbnail-video" preload="metadata" muted></video>
@@ -845,7 +1086,13 @@
                   <button class="btn-delete-clip btn-cancel-rename" style="padding: 0.2rem;"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>
                 </div>
               </div>
-              <div class="clip-meta-row"><span>${new Date(clip.createdAt).toLocaleDateString()}</span><span>${formatSize(clip.size)}</span></div>
+              <div class="clip-meta-row" style="display: flex; justify-content: space-between; align-items: center;">
+                <span>${new Date(clip.createdAt).toLocaleDateString()}</span>
+                <div style="display: flex; align-items: center; gap: 0.35rem;">
+                  <span>${formatSize(clip.size)}</span>
+                  ${clip.downloadURL ? `<i data-lucide="cloud" style="width: 12px; height: 12px; color: var(--color-secondary);" title="Cloud Synced"></i>` : ''}
+                </div>
+              </div>
               <div class="clip-actions" style="grid-template-columns: 1fr auto auto;">
                 <button class="btn-download-clip" data-action="download"><i data-lucide="download" style="width: 14px; height: 14px;"></i><span>Download Video</span></button>
                 <button class="btn-download-clip" data-action="share" style="background: rgba(0, 242, 254, 0.05); color: var(--color-secondary); padding: 0.5rem;" title="Share & Embed"><i data-lucide="share-2" style="width: 14px; height: 14px;"></i></button>
@@ -854,10 +1101,28 @@
             </div>
           `;
           card.querySelector('[data-action="play"]').addEventListener('click', () => openVideoModal(clip));
-          card.querySelector('[data-action="download"]').addEventListener('click', () => { triggerDownload(clip.blob, `${clip.title.replace(/\s+/g, '_')}.webm`); showToast('Downloading file...'); });
+          card.querySelector('[data-action="download"]').addEventListener('click', () => { 
+            if (clip.downloadURL) {
+              triggerDownloadUrl(clip.downloadURL, `${clip.title.replace(/\s+/g, '_')}.webm`);
+            } else {
+              triggerDownload(clip.blob, `${clip.title.replace(/\s+/g, '_')}.webm`);
+            }
+            showToast('Downloading file...'); 
+          });
           card.querySelector('[data-action="share"]').addEventListener('click', () => openShareModal(clip));
           card.querySelector('[data-action="delete"]').addEventListener('click', async () => {
-            if (confirm('Permanently delete this clip?')) { await deleteRecording(clip.id); showToast('Recording deleted'); loadRecordings(); }
+            if (confirm('Permanently delete this clip?')) { 
+              await deleteRecording(clip.id); 
+              if (isFirebaseConnected && clip.storagePath) {
+                try {
+                  await fbDeleteDoc(fbDoc(dbFirebase, "recordings", clip.id));
+                  const storageRef = fbRef(storageFirebase, clip.storagePath);
+                  await fbDeleteObject(storageRef);
+                } catch (e) { console.error("Firebase deletion failed:", e); }
+              }
+              showToast('Recording deleted'); 
+              loadRecordings(); 
+            }
           });
           const editBtn = card.querySelector('.btn-edit'), saveRenameBtn = card.querySelector('.btn-save-rename'), cancelRenameBtn = card.querySelector('.btn-cancel-rename');
           const titleView = card.querySelector('.title-view-container'), titleEdit = card.querySelector('.title-edit-container'), titleInput = card.querySelector('.clip-title-input');
@@ -877,10 +1142,24 @@
       function openVideoModal(clip) {
         el.modalTitle.textContent = clip.title; el.modalMetaRes.textContent = `Resolution: ${clip.resolution}`;
         el.modalMetaFps.textContent = `Frame Rate: ${clip.fps} FPS`; el.modalMetaSize.textContent = `File Size: ${formatSize(clip.size)}`;
-        modalBlobUrl = URL.createObjectURL(clip.blob); el.modalVideoPlayer.src = modalBlobUrl;
+        
+        if (clip.downloadURL) {
+          modalBlobUrl = null; el.modalVideoPlayer.src = clip.downloadURL;
+        } else if (clip.blob) {
+          modalBlobUrl = URL.createObjectURL(clip.blob); el.modalVideoPlayer.src = modalBlobUrl;
+        } else {
+          showToast('Video not available locally or on cloud', 'error'); return;
+        }
+        
         el.modalOverlay.style.display = 'flex'; el.modalVideoPlayer.play();
         const clone = el.btnModalDownload.cloneNode(true); el.btnModalDownload.parentNode.replaceChild(clone, el.btnModalDownload);
-        el.btnModalDownload = clone; el.btnModalDownload.addEventListener('click', () => triggerDownload(clip.blob, `${clip.title.replace(/\s+/g, '_')}.webm`));
+        el.btnModalDownload = clone; el.btnModalDownload.addEventListener('click', () => {
+          if (clip.downloadURL) {
+            triggerDownloadUrl(clip.downloadURL, `${clip.title.replace(/\s+/g, '_')}.webm`);
+          } else {
+            triggerDownload(clip.blob, `${clip.title.replace(/\s+/g, '_')}.webm`);
+          }
+        });
       }
       function closeVideoModal() {
         el.modalOverlay.style.display = 'none'; el.modalVideoPlayer.pause(); el.modalVideoPlayer.src = '';
@@ -890,24 +1169,36 @@
       el.btnModalCancel.addEventListener('click', closeVideoModal);
       el.modalOverlay.addEventListener('click', (e) => { if (e.target === el.modalOverlay) closeVideoModal(); });
       let activeShareBlob = null;
+      let activeShareDownloadURL = null;
       function openShareModal(clip) {
         activeShareBlob = clip.blob;
+        activeShareDownloadURL = clip.downloadURL;
         const filename = `${clip.title.replace(/\s+/g, '_')}.webm`;
-        const videoSnippet = `<video src="${filename}" controls style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></video>`;
+        const urlToUse = clip.downloadURL || filename;
+        const videoSnippet = `<video src="${urlToUse}" controls style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"></video>`;
         el.shareHtmlSnippet.value = videoSnippet;
         const pageUrl = window.location.href.split('?')[0].split('#')[0];
         const iframeSnippet = `<iframe src="${pageUrl}" width="100%" height="680" allow="display-capture; microphone; camera" style="border: none; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.2);"></iframe>`;
         el.shareIframeSnippet.value = iframeSnippet;
-        el.btnCopyDataurlText.textContent = "Generate & Copy Base64 Link";
-        el.btnCopyDataurl.disabled = false;
-        el.btnUploadCloudText.textContent = "Upload Video & Get Public Link";
-        el.btnUploadCloud.disabled = false;
+        if (clip.downloadURL) {
+          el.btnCopyDataurlText.textContent = "Base64 Disabled for Cloud Video";
+          el.btnCopyDataurl.disabled = true;
+          el.btnUploadCloudText.textContent = "Copy Firebase Cloud Link";
+          el.btnUploadCloud.disabled = false;
+        } else {
+          el.btnCopyDataurlText.textContent = "Generate & Copy Base64 Link";
+          el.btnCopyDataurl.disabled = false;
+          el.btnUploadCloudText.textContent = "Upload Video & Get Public Link";
+          el.btnUploadCloud.disabled = false;
+        }
         el.modalShareOverlay.style.display = 'flex';
       }
       function closeShareModal() {
         el.modalShareOverlay.style.display = 'none';
         activeShareBlob = null;
+        activeShareDownloadURL = null;
       }
+      // 11. Helper utilities (File size, times formats, downloads)
       function formatDuration(ms) {
         const s = Math.floor((ms / 1000) % 60), m = Math.floor((ms / (1000 * 60)) % 60), h = Math.floor((ms / (1000 * 60 * 60)) % 24);
         return `${h > 0 ? h.toString().padStart(2, '0') + ':' : ''}${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
@@ -960,6 +1251,18 @@
           reader.readAsDataURL(activeShareBlob);
         });
         el.btnUploadCloud.addEventListener('click', () => {
+          if (activeShareDownloadURL) {
+            navigator.clipboard.writeText(activeShareDownloadURL).then(() => {
+              el.btnUploadCloudText.textContent = "Copied Cloud Link!";
+              showToast('Firebase cloud link copied to clipboard!', 'success');
+              setTimeout(() => {
+                el.btnUploadCloudText.textContent = "Copy Firebase Cloud Link";
+              }, 2000);
+            }).catch(err => {
+              showToast('Copy failed. Please try again.', 'error');
+            });
+            return;
+          }
           if (!activeShareBlob) return;
           el.btnUploadCloudText.textContent = "Uploading to Cloud...";
           el.btnUploadCloud.disabled = true;
